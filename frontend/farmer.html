@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Dashboard | National Digital Procurement System</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script>
+        (function() {
+            const token = localStorage.getItem("sih_procurement_token") || localStorage.getItem("sih_token");
+            const userStr = localStorage.getItem("sih_procurement_user") || localStorage.getItem("sih_user");
+            let user = null;
+            try { user = JSON.parse(userStr); } catch (e) {}
+            if (!token || !user) {
+                window.location.replace("/index.html?auth_required=true&module=Farmer+Portal");
+            } else if (user.role !== "FARMER") {
+                window.location.replace("/index.html?auth_required=true&module=Farmer+Portal&unauthorized_role=true");
+            }
+        })();
+    </script>
+</head>
+<body>
+    <!-- Top Gov Bar -->
+    <div class="gov-topbar">
+        <span>🇮🇳 Government of India • Ministry of Consumer Affairs, Food & Public Distribution</span>
+        <span id="farmer-top-id">Farmer Portal • SIH 2026</span>
+    </div>
+
+    <!-- Portal Header -->
+    <header class="portal-header">
+        <div class="brand-section">
+            <div class="emblem-icon" id="farmer-avatar-container" style="overflow: hidden; padding: 0; display: flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: var(--radius-md); background: rgba(255,255,255,0.15);">
+                <span id="farmer-avatar-emoji" style="font-size: 2.2rem;">👨‍🌾</span>
+                <img id="farmer-avatar-img" class="emblem-avatar" style="display: none;" alt="Farmer Profile Photo">
+            </div>
+            <div class="brand-text">
+                <h1 id="farmer-welcome-title" data-i18n="welcome_farmer">Welcome, Farmer</h1>
+                <p id="farmer-details-sub">Loading profile...</p>
+            </div>
+        </div>
+
+        <div class="header-controls">
+            <div class="language-selector">
+                <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">English</button>
+                <button class="lang-btn" data-lang="hi" onclick="setLanguage('hi')">हिन्दी</button>
+                <button class="lang-btn" data-lang="te" onclick="setLanguage('te')">తెలుగు</button>
+            </div>
+            <span id="ws-status-badge" class="badge badge-live pulse">LIVE CONNECTED</span>
+            <button class="btn-signout" onclick="App.logout()" data-i18n="logout">Sign Out</button>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- 1. HERO ACTIVE TOKEN CARD (Live Real-Time Status) -->
+        <section id="active-token-section">
+            <!-- Populated dynamically via JS -->
+            <div class="card hero-token-card" id="token-card-loading">
+                <p style="text-align: center; padding: 20px; font-size: 1.1rem; color: var(--text-muted);">
+                    ⏳ Connecting to live queue telemetry...
+                </p>
+            </div>
+        </section>
+
+        <!-- 2. QUICK ACTIONS & TAB NAVIGATION -->
+        <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="showTab('booking-tab')" id="tab-btn-booking">
+                <span>📅 Book Procurement Slot</span>
+            </button>
+            <button class="btn btn-outline" onclick="showTab('notifications-tab')" id="tab-btn-notifs">
+                <span>🔔 Alerts & Notices (<span id="notif-count">0</span>)</span>
+            </button>
+            <button class="btn btn-outline" onclick="showTab('history-tab')" id="tab-btn-history">
+                <span>📜 Procurement History</span>
+            </button>
+        </div>
+
+        <!-- TAB A: BOOKING WIZARD -->
+        <section id="booking-tab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>📅 <span data-i18n="book_slot_title">Book Procurement Slot</span></h2>
+                    <span class="badge badge-live">Verified MSP Guaranteed</span>
+                </div>
+
+                <form id="booking-form" onsubmit="handleBookSlot(event)">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                        <!-- Select Center -->
+                        <div class="form-group">
+                            <label data-i18n="select_center">1. Select Procurement Center</label>
+                            <select id="book-center" class="form-control" onchange="onCenterChange()" required>
+                                <option value="">Loading centers...</option>
+                            </select>
+                        </div>
+
+                        <!-- Select Commodity -->
+                        <div class="form-group">
+                            <label data-i18n="select_commodity">2. Select Commodity</label>
+                            <select id="book-commodity" class="form-control" onchange="onCommodityChange()" required>
+                                <option value="">Select commodity...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Available Schedules & Slots Grid -->
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label data-i18n="select_date_slot">3. Choose Available Date & Time Slot</label>
+                        <div id="slots-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 8px;">
+                            <p style="color: var(--text-muted); font-size: 0.95rem;">Please select center and commodity above to load schedules.</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+                        <div class="form-group">
+                            <label data-i18n="estimated_qty">Estimated Quantity (Quintals)</label>
+                            <input type="number" id="book-qty" class="form-control" min="1" max="500" value="40" required>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="vehicle_num">Vehicle Number (Optional)</label>
+                            <input type="text" id="book-vehicle" class="form-control" placeholder="e.g. TS-29-TA-1234">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-accent" style="width: 100%; margin-top: 12px; font-size: 1.1rem;" id="btn-generate-token">
+                        <span data-i18n="btn_confirm_booking">Generate Digital Token</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- TAB B: NOTIFICATIONS -->
+        <section id="notifications-tab" class="tab-content" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔔 <span data-i18n="notifications_title">Alerts & Announcements</span></h2>
+                </div>
+                <div id="notifications-list" style="display: flex; flex-direction: column; gap: 12px;">
+                    <p style="color: var(--text-muted);">Loading notifications...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB C: TRANSACTION HISTORY -->
+        <section id="history-tab" class="tab-content" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2>📜 <span data-i18n="history_title">Procurement Transaction History</span></h2>
+                    <span class="badge badge-live">Direct Benefit Transfer (DBT)</span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Booking Ref</th>
+                                <th>Date</th>
+                                <th>Center</th>
+                                <th>Commodity</th>
+                                <th>Token</th>
+                                <th>Net Weight (Qtl)</th>
+                                <th>Total Amount (₹)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <tr><td colspan="8" style="text-align: center; padding: 20px;">Loading history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 3. DIGITAL TOKEN PASS MODAL (Printable & Downloadable) -->
+    <div class="modal-overlay" id="token-pass-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🎫 Official Digital Token Pass</h3>
+                <button class="btn-close" onclick="closePassModal()">&times;</button>
+            </div>
+            <div class="token-pass-card" id="printable-pass-content">
+                <div style="font-size: 0.85rem; font-weight: 700; color: #64748b; letter-spacing: 1px;">MINISTRY OF AGRICULTURE & FARMER WELFARE</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin: 6px 0;" id="pass-center-name">Central Procurement Center</div>
+                <hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 12px 0;">
+                
+                <div style="font-size: 0.85rem; color: var(--text-muted);">YOUR TOKEN NUMBER</div>
+                <div class="pass-number" id="pass-token-number">A023</div>
+
+                <div class="pass-qr" id="pass-qr-container">
+                    <!-- Pure JS SVG QR Code Representation -->
+                </div>
+
+                <div style="text-align: left; background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.9rem; line-height: 1.6;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                        <img id="pass-farmer-img" style="display: none; width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light);" alt="Photo">
+                        <div>
+                            <div><strong>Farmer:</strong> <span id="pass-farmer-name">-</span></div>
+                            <div style="font-size: 0.78rem; color: #64748b;" id="pass-farmer-code">-</div>
+                        </div>
+                    </div>
+                    <div><strong>Commodity:</strong> <span id="pass-commodity">-</span></div>
+                    <div><strong>Schedule Date:</strong> <span id="pass-date">-</span></div>
+                    <div><strong>Assigned Slot:</strong> <span id="pass-slot">-</span></div>
+                    <div><strong>MSP Rate:</strong> <span id="pass-msp">-</span></div>
+                    <div><strong>Security Signature:</strong> <span id="pass-checksum" style="font-family: monospace;">CRC8-OK</span></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button class="btn btn-primary" onclick="window.print()" style="flex: 1;" data-i18n="print_pass">🖨️ Print Pass</button>
+                <button class="btn btn-outline" onclick="closePassModal()" data-i18n="close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Smart India Hackathon 2026 • PS ID: 26032 • Digital Procurement System</p>
+    </footer>
+
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/farmer.js"></script>
+</body>
+</html>

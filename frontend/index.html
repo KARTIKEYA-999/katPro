@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Digital Procurement Management Portal | SIH 2026</title>
+    <meta name="description" content="Digital System for Procurement Schedules, Farmer Queues and Real-Time Status - Smart India Hackathon 2026 PS ID: 26032">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Top Gov Bar -->
+    <div class="gov-topbar">
+        <span>🇮🇳 Government of India • Ministry of Consumer Affairs, Food & Public Distribution</span>
+        <span>Smart India Hackathon 2026 | PS ID: 26032</span>
+    </div>
+
+    <!-- Portal Header -->
+    <header class="portal-header">
+        <div class="brand-section">
+            <div class="emblem-icon">🌾</div>
+            <div class="brand-text">
+                <h1 data-i18n="portal_title">National Digital Agricultural Procurement System</h1>
+                <p data-i18n="portal_subtitle">Real-Time Procurement Schedules, Token Queues & Live Status</p>
+            </div>
+        </div>
+
+        <div class="header-controls">
+            <div class="language-selector">
+                <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">English</button>
+                <button class="lang-btn" data-lang="hi" onclick="setLanguage('hi')">हिन्दी</button>
+                <button class="lang-btn" data-lang="te" onclick="setLanguage('te')">తెలుగు</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Mandatory Login Alert Banner (Shown when unauthenticated users try direct access) -->
+        <div id="auth-required-banner" class="card" style="display: none; border-left: 5px solid var(--danger-color); background: #fef2f2; margin-bottom: 20px;">
+            <div style="display: flex; align-items: flex-start; gap: 14px;">
+                <div style="font-size: 1.8rem; line-height: 1;">🛡️</div>
+                <div>
+                    <h3 style="color: #991b1b; margin-bottom: 4px; font-size: 1.1rem;">Access Restricted: Authentication Mandatory</h3>
+                    <p id="auth-required-message" style="color: #7f1d1d; font-size: 0.92rem; margin-bottom: 8px;">
+                        Login is strictly mandatory to access this module. Please sign in with your credentials or use Quick Demo Access below.
+                    </p>
+                    <span class="badge badge-danger" style="font-weight: 600;">Security Gate Active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hero SIH Demonstration Access -->
+        <div class="card" style="border-top: 4px solid var(--accent-gold); background: linear-gradient(to right, #ffffff, #fefce8);">
+            <div class="card-header">
+                <h2>⚡ <span data-i18n="demo_logins">Quick SIH Demo Access</span></h2>
+                <span class="badge badge-live">Ready for Presentation</span>
+            </div>
+            <p style="margin-bottom: 16px; color: var(--text-muted); font-size: 0.95rem;">
+                Click any button below to instantly sign in and explore the full live workflow for PS ID: 26032:
+            </p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn btn-accent" onclick="demoLogin('farmer')" id="demo-farmer-btn">
+                    <span data-i18n="demo_farmer_btn">👨‍🌾 Demo Farmer (Token A023 in Queue)</span>
+                </button>
+                <button class="btn btn-primary" onclick="demoLogin('official')" id="demo-official-btn">
+                    <span data-i18n="demo_official_btn">🏢 Demo Official (Suryapet CPC Control Room)</span>
+                </button>
+                <button class="btn btn-outline" onclick="demoLogin('admin')" id="demo-admin-btn">
+                    <span data-i18n="demo_admin_btn">🏛️ Demo State Administrator</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Login / Register Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+            <!-- Login Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔐 <span data-i18n="login_title">Sign In to Your Account</span></h2>
+                </div>
+
+                <!-- Clear Inline Error Message Box -->
+                <div id="login-error-box" style="display: none; color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 0.92rem; align-items: flex-start; gap: 10px;">
+                    <span style="font-size: 1.25rem; line-height: 1;">🚨</span>
+                    <div id="login-error-msg" style="line-height: 1.4;"></div>
+                </div>
+
+                <form id="login-form" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label data-i18n="select_role">Select Your Role</label>
+                        <select id="login-role" class="form-control" onchange="onRoleChanged()">
+                            <option value="FARMER" data-i18n="role_farmer">Farmer</option>
+                            <option value="OFFICIAL" data-i18n="role_official">Center Official</option>
+                            <option value="ADMIN" data-i18n="role_admin">Administrator</option>
+                        </select>
+                        <div style="margin-top: 6px; font-size: 0.82rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                            <span id="role-hint">👨‍🌾 Farmer profile (Demo: <code>farmer1</code>)</span>
+                            <button type="button" class="btn btn-outline" style="padding: 2px 8px; min-height: 24px; font-size: 0.78rem;" onclick="fillSampleCredentials()">
+                                ⚡ Fill Sample
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="username">Username</label>
+                        <input type="text" id="login-username" class="form-control" placeholder="e.g. farmer1" required oninput="clearLoginErrors()">
+                    </div>
+
+                    <div class="form-group">
+                        <label data-i18n="password">Password</label>
+                        <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required oninput="clearLoginErrors()">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;" id="login-submit-btn">
+                        <span data-i18n="btn_login">Sign In</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- New Farmer Registration -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>📝 <span data-i18n="btn_register">Register as New Farmer</span></h2>
+                    <span class="badge badge-live">Direct Aadhaar Integration</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+                    Are you a farmer without an account? Register your farm details to start booking procurement slots and generating digital tokens.
+                </p>
+                <form id="register-form" onsubmit="handleRegister(event)">
+                    <!-- Profile Photo Uploader -->
+                    <div class="avatar-upload-box">
+                        <div class="avatar-preview-wrap" id="reg-avatar-wrap">
+                            <span class="avatar-preview-default" id="reg-avatar-default">👨‍🌾</span>
+                            <img id="reg-avatar-img" class="avatar-preview-img" style="display: none;" alt="Farmer Preview">
+                        </div>
+                        <div class="avatar-upload-details">
+                            <label>
+                                <span>📸 Profile Photo</span>
+                                <small style="color: var(--accent-gold); font-weight: normal;">(Optional)</small>
+                            </label>
+                            <p id="reg-avatar-hint">Add your photo for biometric token pass verification</p>
+                            <div class="avatar-upload-actions">
+                                <label for="reg-photo-file" class="btn-upload-file">
+                                    <span>Upload Photo</span>
+                                </label>
+                                <input type="file" id="reg-photo-file" accept="image/*" style="display: none;" onchange="handleAvatarSelect(event)">
+                                <button type="button" class="btn-remove-avatar" id="reg-avatar-remove" style="display: none;" onclick="removeAvatarSelection()">
+                                    ✕ Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="reg-fullname" class="form-control" placeholder="Farmer Full Name" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label>Mobile Number</label>
+                            <input type="tel" id="reg-phone" class="form-control" placeholder="+91 98765 43210" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Preferred Username</label>
+                            <input type="text" id="reg-username" class="form-control" placeholder="Username" required>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="reg-password" class="form-control" placeholder="Password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Village / District</label>
+                            <input type="text" id="reg-village" class="form-control" placeholder="e.g. Kudakuda, Suryapet" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-accent" style="width: 100%; margin-top: 8px;">
+                        <span>Register & Get Digital Pass</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Live Public Procurement Centers Status Board -->
+        <div class="card">
+            <div class="card-header">
+                <h2>🏢 Live Procurement Centers Status Board</h2>
+                <span id="ws-status-badge" class="badge badge-live pulse">LIVE CONNECTED</span>
+            </div>
+            <div class="table-wrapper">
+                <table id="public-centers-table">
+                    <thead>
+                        <tr>
+                            <th>Center Name</th>
+                            <th>District</th>
+                            <th>Current Serving Token</th>
+                            <th>Operating Hours</th>
+                            <th>Active Counters</th>
+                            <th>Center Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="public-centers-body">
+                        <tr><td colspan="6" style="text-align:center; padding: 20px;">Loading center feeds...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Smart India Hackathon 2026 • Problem Statement PS ID: 26032 • Digital Procurement Platform</p>
+        <p style="margin-top: 4px; opacity: 0.8;">Integrated with C Micro-Engine (`libcqueue`), C++ Optimizer (`libcppqueue_opt`), PostgreSQL 16 & FastAPI</p>
+    </footer>
+
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Load Public Centers
+        async function loadPublicCenters() {
+            try {
+                const centers = await App.fetch("/api/public/centers");
+                const tbody = document.getElementById("public-centers-body");
+                tbody.innerHTML = centers.map(c => `
+                    <tr>
+                        <td><strong>${c.name}</strong><br><small style="color:#64748b">${c.center_code} • ${c.address}</small></td>
+                        <td>${c.district}, ${c.state}</td>
+                        <td>
+                            <span class="badge ${c.current_token_seq > 0 ? 'badge-live pulse' : 'badge-warning'}">
+                                ${c.current_token_seq > 0 ? 'A' + String(c.current_token_seq).padStart(3, '0') : 'Not Started'}
+                            </span>
+                        </td>
+                        <td>${c.working_hours_start.slice(0, 5)} - ${c.working_hours_end.slice(0, 5)}</td>
+                        <td>${c.active_counters} Active</td>
+                        <td>
+                            <span class="badge ${c.status === 'OPEN' || c.status === 'IN PROGRESS' ? 'badge-live' : 'badge-danger'}">
+                                ${c.status}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error("Failed to load public centers:", e);
+            }
+        }
+
+        // Handle Demo Login
+        async function demoLogin(role) {
+            try {
+                const data = await App.fetch(`/api/auth/demo-login/${role}`, { method: "POST" });
+                App.setAuth(data.access_token, data.user);
+                App.showToast(`Logged in as ${data.user.full_name} (${data.user.role})`, "success");
+
+                if (data.user.role === "FARMER") window.location.href = "/farmer";
+                else if (data.user.role === "OFFICIAL") window.location.href = "/official";
+                else if (data.user.role === "ADMIN") window.location.href = "/admin";
+            } catch (e) {
+                App.showToast(e.message, "alert");
+            }
+        }
+
+        function onRoleChanged() {
+            const role = document.getElementById("login-role").value;
+            const userInp = document.getElementById("login-username");
+            const hint = document.getElementById("role-hint");
+            clearLoginErrors();
+
+            if (role === "FARMER") {
+                userInp.placeholder = "e.g. farmer1";
+                if (hint) hint.innerHTML = `👨‍🌾 Farmer profile (Demo: <code>farmer1</code>)`;
+            } else if (role === "OFFICIAL") {
+                userInp.placeholder = "e.g. official1";
+                if (hint) hint.innerHTML = `🏢 Mandi Official profile (Demo: <code>official1</code>)`;
+            } else if (role === "ADMIN") {
+                userInp.placeholder = "e.g. admin1";
+                if (hint) hint.innerHTML = `🏛️ State Administrator profile (Demo: <code>admin1</code>)`;
+            }
+        }
+
+        function clearLoginErrors() {
+            const errorBox = document.getElementById("login-error-box");
+            if (errorBox) errorBox.style.display = "none";
+            const userInp = document.getElementById("login-username");
+            const passInp = document.getElementById("login-password");
+            if (userInp) userInp.style.borderColor = "";
+            if (passInp) passInp.style.borderColor = "";
+        }
+
+        function fillSampleCredentials() {
+            clearLoginErrors();
+            const role = document.getElementById("login-role").value;
+            const userInp = document.getElementById("login-username");
+            const passInp = document.getElementById("login-password");
+            if (role === "FARMER") {
+                userInp.value = "farmer1";
+                passInp.value = "farmer123";
+            } else if (role === "OFFICIAL") {
+                userInp.value = "official1";
+                passInp.value = "official123";
+            } else if (role === "ADMIN") {
+                userInp.value = "admin1";
+                passInp.value = "admin123";
+            }
+            App.showToast(`Sample credentials filled for ${role}`, "info");
+        }
+
+        // Handle Regular Login
+        async function handleLogin(e) {
+            e.preventDefault();
+            clearLoginErrors();
+            const role = document.getElementById("login-role").value;
+            const userInp = document.getElementById("login-username");
+            const passInp = document.getElementById("login-password");
+            const username = userInp.value.trim();
+            const password = passInp.value;
+            const errorBox = document.getElementById("login-error-box");
+            const errorMsg = document.getElementById("login-error-msg");
+
+            try {
+                const data = await App.fetch("/api/auth/login", {
+                    method: "POST",
+                    body: JSON.stringify({ username, password, role })
+                });
+
+                if (data.user.role !== role) {
+                    const msg = `Role mismatch: Your account has role ${data.user.role}, but you selected ${role}.`;
+                    if (errorBox && errorMsg) {
+                        errorMsg.innerHTML = `<strong>Access Denied:</strong> ${msg}`;
+                        errorBox.style.display = "flex";
+                    }
+                    App.showToast(msg, "alert");
+                    return;
+                }
+
+                App.setAuth(data.access_token, data.user);
+                App.showToast(`Signed in successfully as ${data.user.full_name} (${data.user.role})`, "success");
+
+                if (data.user.role === "FARMER") window.location.href = "/farmer";
+                else if (data.user.role === "OFFICIAL") window.location.href = "/official";
+                else if (data.user.role === "ADMIN") window.location.href = "/admin";
+            } catch (err) {
+                if (errorBox && errorMsg) {
+                    errorMsg.innerHTML = `<strong>Authentication Failed:</strong> ${err.message}`;
+                    errorBox.style.display = "flex";
+                }
+                if (userInp) userInp.style.borderColor = "#dc2626";
+                if (passInp) passInp.style.borderColor = "#dc2626";
+                App.showToast(err.message, "alert");
+            }
+        }
+
+        // Profile Avatar Upload Handling
+        let selectedAvatarBase64 = null;
+
+        function handleAvatarSelect(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                App.showToast("Selected image exceeds 5MB limit. Please choose a smaller photo.", "alert");
+                e.target.value = "";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                selectedAvatarBase64 = evt.target.result;
+                const img = document.getElementById("reg-avatar-img");
+                const def = document.getElementById("reg-avatar-default");
+                const removeBtn = document.getElementById("reg-avatar-remove");
+                const hint = document.getElementById("reg-avatar-hint");
+
+                if (img && def) {
+                    img.src = selectedAvatarBase64;
+                    img.style.display = "block";
+                    def.style.display = "none";
+                }
+                if (removeBtn) removeBtn.style.display = "inline-block";
+                if (hint) hint.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeAvatarSelection() {
+            selectedAvatarBase64 = null;
+            const fileInp = document.getElementById("reg-photo-file");
+            if (fileInp) fileInp.value = "";
+            const img = document.getElementById("reg-avatar-img");
+            const def = document.getElementById("reg-avatar-default");
+            const removeBtn = document.getElementById("reg-avatar-remove");
+            const hint = document.getElementById("reg-avatar-hint");
+
+            if (img && def) {
+                img.src = "";
+                img.style.display = "none";
+                def.style.display = "block";
+            }
+            if (removeBtn) removeBtn.style.display = "none";
+            if (hint) hint.textContent = "Add your photo for biometric token pass verification";
+        }
+
+        // Handle New Farmer Registration
+        async function handleRegister(e) {
+            e.preventDefault();
+            const fullName = document.getElementById("reg-fullname").value.trim();
+            const phone = document.getElementById("reg-phone").value.trim();
+            const username = document.getElementById("reg-username").value.trim();
+            const password = document.getElementById("reg-password").value;
+            const village = document.getElementById("reg-village").value.trim();
+
+            try {
+                const data = await App.fetch("/api/auth/register", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        role: "FARMER",
+                        full_name: fullName,
+                        phone,
+                        village,
+                        profile_image: selectedAvatarBase64
+                    })
+                });
+                App.setAuth(data.access_token, data.user);
+                App.showToast("Registration successful! Redirecting to Farmer Portal...", "success");
+                setTimeout(() => window.location.href = "/farmer", 1000);
+            } catch (err) {
+                App.showToast(err.message, "alert");
+            }
+        }
+
+        function checkAuthNotice() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("auth_required") === "true") {
+                const banner = document.getElementById("auth-required-banner");
+                const msgEl = document.getElementById("auth-required-message");
+                const mod = params.get("module") || "the requested module";
+                const isUnauthorizedRole = params.get("unauthorized_role") === "true";
+                const user = App.getUser();
+
+                if (isUnauthorizedRole && user) {
+                    msgEl.innerHTML = `Access Denied: You are signed in as <strong>${user.full_name} (${user.role})</strong>, which does not have permission to access <strong>${mod}</strong>. Please sign in with an authorized role account below.`;
+                } else {
+                    msgEl.innerHTML = `Direct access to <strong>${mod}</strong> was blocked. <strong>Login is strictly mandatory</strong> to access this system. Please sign in or use Quick Demo Access below.`;
+                }
+
+                if (banner) {
+                    banner.style.display = "block";
+                    banner.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+                return true;
+            }
+            return false;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadPublicCenters();
+            const hasNotice = checkAuthNotice();
+            if (!hasNotice) {
+                // Check for existing login
+                const user = App.getUser();
+                if (user) {
+                    if (user.role === "FARMER") window.location.href = "/farmer";
+                    else if (user.role === "OFFICIAL") window.location.href = "/official";
+                    else if (user.role === "ADMIN") window.location.href = "/admin";
+                }
+            }
+        });
+    </script>
+</body>
+</html>

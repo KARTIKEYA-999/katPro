@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Control Room | Procurement Management System</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script>
+        (function() {
+            const token = localStorage.getItem("sih_procurement_token") || localStorage.getItem("sih_token");
+            const userStr = localStorage.getItem("sih_procurement_user") || localStorage.getItem("sih_user");
+            let user = null;
+            try { user = JSON.parse(userStr); } catch (e) {}
+            if (!token || !user) {
+                window.location.replace("/index.html?auth_required=true&module=Official+Control+Room");
+            } else if (user.role !== "OFFICIAL") {
+                window.location.replace("/index.html?auth_required=true&module=Official+Control+Room&unauthorized_role=true");
+            }
+        })();
+    </script>
+</head>
+<body>
+    <!-- Top Gov Bar -->
+    <div class="gov-topbar">
+        <span>🇮🇳 Government of India • Ministry of Consumer Affairs, Food & Public Distribution</span>
+        <span id="official-top-title">Official Control Room • SIH 2026</span>
+    </div>
+
+    <!-- Portal Header -->
+    <header class="portal-header">
+        <div class="brand-section">
+            <div class="emblem-icon">🏢</div>
+            <div class="brand-text">
+                <h1 id="official-center-name">Central Procurement Center</h1>
+                <p id="official-inspector-sub">Officer: Loading profile...</p>
+            </div>
+        </div>
+
+        <div class="header-controls">
+            <div class="language-selector">
+                <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">English</button>
+                <button class="lang-btn" data-lang="hi" onclick="setLanguage('hi')">हिन्दी</button>
+                <button class="lang-btn" data-lang="te" onclick="setLanguage('te')">తెలుగు</button>
+            </div>
+            <span id="ws-status-badge" class="badge badge-live pulse">LIVE CONNECTED</span>
+            <button class="btn-signout" onclick="App.logout()" data-i18n="logout">Sign Out</button>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- 1. CENTER OPERATIONAL STATUS & KPI OVERVIEW -->
+        <div class="card" style="border-top: 4px solid var(--primary-color);">
+            <div class="card-header">
+                <h2>🎛️ Center Operations & Live Status</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: 600; font-size: 0.9rem;" data-i18n="center_status">Center Status:</label>
+                    <select id="center-status-select" class="form-control" style="width: auto; font-weight: 700;" onchange="handleCenterStatusChange()">
+                        <option value="OPEN">🟢 OPEN (Procurement Active)</option>
+                        <option value="IN PROGRESS">🔵 IN PROGRESS</option>
+                        <option value="PAUSED">⏸️ PAUSED (Lunch / Maintenance)</option>
+                        <option value="DELAYED">⚠️ DELAYED (Rain / Logistics)</option>
+                        <option value="COMPLETED">✅ COMPLETED FOR TODAY</option>
+                        <option value="CLOSED">🔴 CLOSED</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- KPI Counters -->
+            <div class="token-stats-grid">
+                <div class="stat-box" style="border-top: 4px solid var(--primary-color);">
+                    <div class="stat-label">CURRENT SERVING</div>
+                    <div class="stat-value highlight" id="stat-current-token">-</div>
+                    <small style="color: var(--text-muted);">Active Weighbridge</small>
+                </div>
+
+                <div class="stat-box" style="border-top: 4px solid var(--accent-gold);">
+                    <div class="stat-label">WAITING IN QUEUE</div>
+                    <div class="stat-value" id="stat-waiting-farmers">0</div>
+                    <small style="color: var(--text-muted);">Queued Farmers</small>
+                </div>
+
+                <div class="stat-box" style="border-top: 4px solid #3b82f6;">
+                    <div class="stat-label">TODAY'S TOTAL</div>
+                    <div class="stat-value" id="stat-total-today">0</div>
+                    <small style="color: var(--text-muted);">Issued Tokens</small>
+                </div>
+
+                <div class="stat-box" style="border-top: 4px solid #16a34a;">
+                    <div class="stat-label">COMPLETED</div>
+                    <div class="stat-value" id="stat-completed-farmers">0</div>
+                    <small style="color: var(--text-muted);">Transactions Done</small>
+                </div>
+
+                <div class="stat-box" style="border-top: 4px solid #8b5cf6;">
+                    <div class="stat-label">EST. AVG WAIT</div>
+                    <div class="stat-value" id="stat-avg-wait">0 <span style="font-size: 1rem;">min</span></div>
+                    <small style="color: var(--text-muted);">C-Engine Telemetry</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. HIGH-IMPACT QUEUE CONTROLLER BAR -->
+        <div class="card" style="background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border: 2px solid #86efac;">
+            <div class="card-header">
+                <h2>⚡ Live Queue Controller</h2>
+                <span class="badge badge-live">Real-time WebSocket Broadcast Enabled</span>
+            </div>
+            <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
+                <!-- Main Action Button -->
+                <button class="btn btn-accent" style="flex: 2; min-height: 54px; font-size: 1.15rem;" onclick="callNextFarmer()" id="btn-call-next">
+                    <span data-i18n="call_next_farmer">📢 CALL NEXT FARMER</span>
+                </button>
+
+                <!-- Complete & Weigh -->
+                <button class="btn btn-success" style="flex: 1.5; min-height: 54px;" onclick="openWeighModal()">
+                    <span data-i18n="complete_weigh">⚖️ Complete & Weigh</span>
+                </button>
+
+                <!-- Pause / Resume -->
+                <button class="btn btn-outline" style="flex: 1; min-height: 54px;" onclick="togglePauseQueue()" id="btn-pause-queue">
+                    <span>⏸️ Pause Queue</span>
+                </button>
+
+                <!-- Publish Announcement -->
+                <button class="btn btn-primary" style="flex: 1; min-height: 54px;" onclick="openAnnouncementModal()">
+                    <span>📢 Notice</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. LIVE QUEUE ROSTER TABLE -->
+        <div class="card">
+            <div class="card-header">
+                <h2>📋 <span data-i18n="live_queue_title">Live Center Queue Roster</span></h2>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="queue-search" class="form-control" style="min-height: 38px; width: 220px;" placeholder="Search token or name..." onkeyup="filterQueueTable()">
+                    <button class="btn btn-outline" style="padding: 6px 14px; min-height: 38px;" onclick="loadQueueRoster()">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="queue-roster-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="table_token">Token</th>
+                            <th data-i18n="table_farmer">Farmer Name</th>
+                            <th data-i18n="table_phone">Phone</th>
+                            <th>Village</th>
+                            <th data-i18n="table_commodity">Commodity</th>
+                            <th data-i18n="table_qty">Qty (Qtl)</th>
+                            <th>Slot</th>
+                            <th data-i18n="table_status">Status</th>
+                            <th data-i18n="table_actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queue-roster-body">
+                        <tr><td colspan="9" style="text-align: center; padding: 20px;">Loading queue roster...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- 4. MODAL: COMPLETE WEIGHING & TRANSACTION -->
+    <div class="modal-overlay" id="weigh-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚖️ Record Weighbridge & Quality Inspection</h3>
+                <button class="btn-close" onclick="closeWeighModal()">&times;</button>
+            </div>
+            <form id="weigh-form" onsubmit="handleCompleteTransaction(event)">
+                <div class="form-group">
+                    <label>Select In-Progress Token</label>
+                    <select id="weigh-token-select" class="form-control" required>
+                        <option value="">Loading active tokens...</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Gross Weight (Quintals)</label>
+                        <input type="number" step="0.01" id="weigh-gross" class="form-control" value="42.50" required oninput="recalcNetWeight()">
+                    </div>
+                    <div class="form-group">
+                        <label>Tare / Vehicle (Quintals)</label>
+                        <input type="number" step="0.01" id="weigh-tare" class="form-control" value="2.50" required oninput="recalcNetWeight()">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>Net Weight (Quintals)</label>
+                        <input type="number" step="0.01" id="weigh-net" class="form-control" value="40.00" readonly style="background: #f1f5f9; font-weight: 700;">
+                    </div>
+                    <div class="form-group">
+                        <label>Moisture Content (%)</label>
+                        <input type="number" step="0.1" id="weigh-moisture" class="form-control" value="14.5" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Quality Inspection Grade</label>
+                    <select id="weigh-grade" class="form-control">
+                        <option value="Grade-A">Grade-A (Standard MSP Rate)</option>
+                        <option value="Grade-B">Grade-B (Common)</option>
+                        <option value="FAQ">Fair Average Quality (FAQ)</option>
+                    </select>
+                </div>
+
+                <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                        <span>Estimated Payout:</span>
+                        <span id="weigh-payout-est" style="color: var(--primary-color); font-size: 1.1rem;">₹88,120.00</span>
+                    </div>
+                    <small style="color: var(--text-muted);">Direct Benefit Transfer (DBT) will disburse funds to farmer account.</small>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button type="submit" class="btn btn-success" style="flex: 1;">Save & Complete Procurement</button>
+                    <button type="button" class="btn btn-outline" onclick="closeWeighModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. MODAL: BROADCAST ANNOUNCEMENT -->
+    <div class="modal-overlay" id="announcement-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>📢 Broadcast Urgent Farmer Notice</h3>
+                <button class="btn-close" onclick="closeAnnouncementModal()">&times;</button>
+            </div>
+            <form id="announcement-form" onsubmit="handleBroadcastAnnouncement(event)">
+                <div class="form-group">
+                    <label>Urgency Level</label>
+                    <select id="ann-urgency" class="form-control">
+                        <option value="NORMAL">Normal Information</option>
+                        <option value="HIGH">High Priority Notice</option>
+                        <option value="EMERGENCY">Emergency / Immediate Delay</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notice Headline</label>
+                    <input type="text" id="ann-title" class="form-control" placeholder="e.g. Weighbridge Counter 2 Operational" required>
+                </div>
+                <div class="form-group">
+                    <label>Detailed Message for Farmers</label>
+                    <textarea id="ann-message" class="form-control" rows="3" placeholder="Provide instructions to queued farmers..." required></textarea>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Broadcast to All Queued Farmers</button>
+                    <button type="button" class="btn btn-outline" onclick="closeAnnouncementModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <p>Smart India Hackathon 2026 • Problem Statement PS ID: 26032 • Official Control Console</p>
+    </footer>
+
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/official.js"></script>
+</body>
+</html>

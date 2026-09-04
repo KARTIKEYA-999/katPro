@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sih_procurement_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: sih_procurement
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sih_procurement"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sih_procurement_backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/sih_procurement
+      - JWT_SECRET_KEY=sih2026-digital-procurement-secret-key-super-secure
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:
