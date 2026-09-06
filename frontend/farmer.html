@@ -51,6 +51,9 @@
     </header>
 
     <main class="app-container">
+        <!-- APPROVAL STATUS BANNER -->
+        <div id="farmer-approval-banner" style="display: none; margin-bottom: 20px;"></div>
+
         <!-- 1. HERO ACTIVE TOKEN CARD (Live Real-Time Status) -->
         <section id="active-token-section">
             <!-- Populated dynamically via JS -->
@@ -123,6 +126,7 @@
                     <button type="submit" class="btn btn-accent" style="width: 100%; margin-top: 12px; font-size: 1.1rem;" id="btn-generate-token">
                         <span data-i18n="btn_confirm_booking">Generate Digital Token</span>
                     </button>
+                    <p id="booking-approval-note" style="display: none; text-align: center; margin-top: 8px; font-size: 0.9rem;"></p>
                 </form>
             </div>
         </section>

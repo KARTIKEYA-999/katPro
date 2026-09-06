@@ -86,10 +86,14 @@ CREATE TABLE farmers (
     primary_crop VARCHAR(64) NOT NULL DEFAULT 'Paddy',
     bank_account_last4 VARCHAR(4),
     profile_image_url TEXT,
+    approval_status VARCHAR(32) NOT NULL DEFAULT 'PENDING' CHECK (approval_status IN ('PENDING', 'APPROVED', 'REJECTED')),
+    approval_remarks TEXT,
+    approved_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_farmers_district ON farmers(district);
+CREATE INDEX idx_farmers_approval_status ON farmers(approval_status);
 
 -- -----------------------------------------------------------------------------
 -- 4. OFFICIALS PROFILE TABLE
@@ -267,7 +271,7 @@ CREATE TABLE notifications (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(128) NOT NULL,
     message TEXT NOT NULL,
-    notification_type VARCHAR(32) NOT NULL DEFAULT 'INFO' CHECK (notification_type IN ('INFO', 'TURN_ALERT', 'SCHEDULE', 'DELAY', 'SUCCESS')),
+    notification_type VARCHAR(32) NOT NULL DEFAULT 'INFO' CHECK (notification_type IN ('INFO', 'TURN_ALERT', 'SCHEDULE', 'DELAY', 'SUCCESS', 'APPROVAL', 'REJECTION')),
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

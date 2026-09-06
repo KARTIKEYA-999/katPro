@@ -235,3 +235,115 @@ class OptimizationRunResponse(BaseModel):
     peak_bottleneck_hour: int
     recommended_slot_capacity: int
     status_summary: str
+
+# --- CENTRAL OFFICE OFFICIAL USER MANAGEMENT SCHEMAS ---
+class OfficialCreate(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    phone: str
+    email: Optional[str] = None
+    center_id: int
+    designation: str = "Procurement Officer"
+    employee_code: Optional[str] = None
+
+class OfficialUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    center_id: Optional[int] = None
+    designation: Optional[str] = None
+    employee_code: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class OfficialDetailOut(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    full_name: str
+    phone: str
+    email: Optional[str] = None
+    center_id: int
+    center_name: Optional[str] = None
+    center_code: Optional[str] = None
+    employee_code: str
+    designation: str
+    is_active: bool
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+# --- FARMER MANAGEMENT & APPROVAL SCHEMAS ---
+class FarmerCreateByOfficial(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    phone: str
+    email: Optional[str] = None
+    village: str
+    mandal: Optional[str] = "Chivvemla"
+    district: str = "Suryapet"
+    state: str = "Telangana"
+    pincode: Optional[str] = None
+    land_size_acres: Optional[float] = 3.0
+    land_area_acres: Optional[float] = None
+    passbook_number: Optional[str] = None
+    aadhaar_number: Optional[str] = None
+    primary_crop: str = "Paddy / Rice (Grade-A)"
+    bank_account_number: Optional[str] = None
+    bank_account_last4: Optional[str] = "1234"
+    bank_ifsc_code: Optional[str] = None
+    bank_name: Optional[str] = None
+    profile_image: Optional[str] = None
+
+class FarmerUpdateByOfficial(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    village: Optional[str] = None
+    mandal: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    land_size_acres: Optional[float] = None
+    land_area_acres: Optional[float] = None
+    passbook_number: Optional[str] = None
+    primary_crop: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_account_last4: Optional[str] = None
+    bank_ifsc_code: Optional[str] = None
+    bank_name: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class FarmerDetailOut(BaseModel):
+    id: int
+    user_id: int
+    username: str
+    farmer_code: str
+    full_name: str
+    phone: str
+    email: Optional[str] = None
+    village: str
+    mandal: Optional[str] = None
+    district: str
+    state: str
+    land_size_acres: float
+    land_area_acres: Optional[float] = None
+    aadhaar_number: Optional[str] = None
+    passbook_number: Optional[str] = None
+    primary_crop: str
+    bank_account_last4: Optional[str] = None
+    center_name: Optional[str] = None
+    center_code: Optional[str] = None
+    profile_image_url: Optional[str] = None
+    approval_status: str
+    approval_remarks: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+class FarmerApprovalAction(BaseModel):
+    remarks: Optional[str] = None

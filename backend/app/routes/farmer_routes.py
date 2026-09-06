@@ -41,7 +41,10 @@ def get_farmer_profile(current_user: User = Depends(require_farmer), db: Session
         "state": farmer.state,
         "land_size_acres": float(farmer.land_size_acres),
         "primary_crop": farmer.primary_crop,
-        "bank_account_last4": farmer.bank_account_last4
+        "bank_account_last4": farmer.bank_account_last4,
+        "approval_status": farmer.approval_status,
+        "approval_remarks": farmer.approval_remarks,
+        "approved_at": farmer.approved_at.strftime("%Y-%m-%d %H:%M") if farmer.approved_at else None
     }
 
 @router.put("/language")
@@ -138,6 +141,18 @@ async def book_procurement_slot(
     farmer = db.query(Farmer).filter(Farmer.user_id == current_user.id).first()
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer record not found")
+
+    # Gating: Only approved farmers are permitted to book procurement tokens
+    if farmer.approval_status != "APPROVED":
+        status_msg = f"Your farmer registration is currently {farmer.approval_status}."
+        if farmer.approval_remarks:
+            status_msg += f" Reason: {farmer.approval_remarks}"
+        else:
+            status_msg += " It is awaiting Administrator verification."
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Booking not permitted: {status_msg} Only approved farmers can book procurement tokens."
+        )
 
     # Check for existing active booking for this farmer
     existing_booking = db.query(Booking).join(Token).filter(

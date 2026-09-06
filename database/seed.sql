@@ -87,36 +87,41 @@ INSERT INTO users (id, username, password_hash, role, full_name, phone, email, l
 (24, 'farmer19', '$2b$12$aPFpNXRNjKZN83LUOQOaM.HdXnG.SrqXZeU3DO.rWiOKJh8fsKYAq', 'FARMER', 'Mukesh Chand',     '+91 98480 11019', NULL, 'hi'),
 (25, 'farmer20', '$2b$12$aPFpNXRNjKZN83LUOQOaM.HdXnG.SrqXZeU3DO.rWiOKJh8fsKYAq', 'FARMER', 'Venkanna Boya',     '+91 98480 11020', NULL, 'te'),
 (26, 'farmer21', '$2b$12$aPFpNXRNjKZN83LUOQOaM.HdXnG.SrqXZeU3DO.rWiOKJh8fsKYAq', 'FARMER', 'Dharamvir Singh',   '+91 98480 11021', NULL, 'hi'),
-(27, 'farmer22', '$2b$12$aPFpNXRNjKZN83LUOQOaM.HdXnG.SrqXZeU3DO.rWiOKJh8fsKYAq', 'FARMER', 'Narsimha Chary',    '+91 98480 11022', NULL, 'te');
+(27, 'farmer22', '$2b$12$aPFpNXRNjKZN83LUOQOaM.HdXnG.SrqXZeU3DO.rWiOKJh8fsKYAq', 'FARMER', 'Narsimha Chary',    '+91 98480 11022', NULL, 'te'),
+-- Sample Pending Verification Farmers for SIH Approval Queue Demonstration
+(28, 'farmer_pending1', '$2b$12$aPFpNXRNjKZN83LUOQOaM.HdXnG.SrqXZeU3DO.rWiOKJh8fsKYAq', 'FARMER', 'Bikshapathi Rao', '+91 98480 11028', 'bikshapathi@agro.in', 'te'),
+(29, 'farmer_pending2', '$2b$12$aPFpNXRNjKZN83LUOQOaM.HdXnG.SrqXZeU3DO.rWiOKJh8fsKYAq', 'FARMER', 'Lakshmi Narayana', '+91 98480 11029', 'lakshmi.n@agro.in', 'te');
 
-ALTER SEQUENCE users_id_seq RESTART WITH 28;
+ALTER SEQUENCE users_id_seq RESTART WITH 30;
 
--- Insert Farmers profiles
-INSERT INTO farmers (id, user_id, farmer_code, village, mandal, district, state, land_size_acres, primary_crop, bank_account_last4) VALUES
-(1,  6,  'FAR-TS-001', 'Kudakuda',       'Chivvemla',   'Suryapet',            'Telangana', 4.50, 'Paddy / Rice (Grade-A)', '4821'),
-(2,  7,  'FAR-TS-002', 'Penpahad',       'Penpahad',    'Suryapet',            'Telangana', 3.00, 'Paddy / Rice (Common)',  '1192'),
-(3,  8,  'FAR-TS-003', 'Anantharam',     'Suryapet',    'Suryapet',            'Telangana', 5.00, 'Wheat (FAQ Standard)',   '8831'),
-(4,  9,  'FAR-TS-004', 'Dameracharla',   'Miryalaguda', 'Nalgonda',            'Telangana', 6.20, 'Paddy / Rice (Grade-A)', '7734'),
-(5,  10, 'FAR-TS-005', 'Tripuraram',     'Tripuraram',  'Nalgonda',            'Telangana', 8.00, 'Wheat (FAQ Standard)',   '9012'),
-(6,  11, 'FAR-TS-006', 'Gudur',          'Enumamula',   'Warangal',            'Telangana', 3.50, 'Maize (Yellow Corn)',    '3341'),
-(7,  12, 'FAR-TS-007', 'Atmakur',        'Atmakur',     'Warangal',            'Telangana', 4.00, 'Cotton (Medium Staple)', '2891'),
-(8,  13, 'FAR-TS-008', 'Sarapaka',       'Burgampahad', 'Bhadradri Kothagudem','Telangana', 2.50, 'Paddy / Rice (Common)',  '5521'),
-(9,  14, 'FAR-TS-009', 'Chivvemla',      'Chivvemla',   'Suryapet',            'Telangana', 3.80, 'Paddy / Rice (Grade-A)', '6612'),
-(10, 15, 'FAR-TS-010', 'Thallada',       'Thallada',    'Khammam',             'Telangana', 5.50, 'Maize (Yellow Corn)',    '1245'),
-(11, 16, 'FAR-TS-011', 'Tirumalagiri',   'Tirumalagiri','Suryapet',            'Telangana', 4.20, 'Paddy / Rice (Grade-A)', '9832'),
-(12, 17, 'FAR-TS-012', 'Mothey',         'Mothey',      'Suryapet',            'Telangana', 3.00, 'Paddy / Rice (Common)',  '4523'),
-(13, 18, 'FAR-TS-013', 'Garidepally',    'Garidepally', 'Suryapet',            'Telangana', 6.00, 'Paddy / Rice (Grade-A)', '7819'),
-(14, 19, 'FAR-TS-014', 'Nereducherla',   'Nereducherla','Suryapet',            'Telangana', 4.50, 'Wheat (FAQ Standard)',   '6634'),
-(15, 20, 'FAR-TS-015', 'Huzurnagar',     'Huzurnagar',  'Suryapet',            'Telangana', 7.00, 'Paddy / Rice (Grade-A)', '8812'),
-(16, 21, 'FAR-TS-016', 'Kodad',          'Kodad',       'Suryapet',            'Telangana', 5.20, 'Paddy / Rice (Grade-A)', '2234'),
-(17, 22, 'FAR-TS-017', 'Munagala',       'Munagala',    'Suryapet',            'Telangana', 3.40, 'Paddy / Rice (Common)',  '9081'),
-(18, 23, 'FAR-TS-018', 'Chilkur',        'Chilkur',     'Suryapet',            'Telangana', 4.80, 'Paddy / Rice (Grade-A)', '5543'),
-(19, 24, 'FAR-TS-019', 'Mellachervu',    'Mellachervu', 'Suryapet',            'Telangana', 6.50, 'Maize (Yellow Corn)',    '1123'),
-(20, 25, 'FAR-TS-020', 'Mattampally',    'Mattampally', 'Suryapet',            'Telangana', 3.20, 'Paddy / Rice (Grade-A)', '4490'),
-(21, 26, 'FAR-TS-021', 'Vemulapally',    'Vemulapally', 'Nalgonda',            'Telangana', 5.00, 'Paddy / Rice (Grade-A)', '7731'),
-(22, 27, 'FAR-TS-022', 'Miryalaguda Rural','Miryalaguda','Nalgonda',           'Telangana', 4.00, 'Paddy / Rice (Common)',  '3319');
+-- Insert Farmers profiles (Existing 22 are APPROVED, 2 are PENDING for Admin verification demo)
+INSERT INTO farmers (id, user_id, farmer_code, village, mandal, district, state, land_size_acres, primary_crop, bank_account_last4, approval_status, approved_at) VALUES
+(1,  6,  'FAR-TS-001', 'Kudakuda',       'Chivvemla',   'Suryapet',            'Telangana', 4.50, 'Paddy / Rice (Grade-A)', '4821', 'APPROVED', CURRENT_TIMESTAMP),
+(2,  7,  'FAR-TS-002', 'Penpahad',       'Penpahad',    'Suryapet',            'Telangana', 3.00, 'Paddy / Rice (Common)',  '1192', 'APPROVED', CURRENT_TIMESTAMP),
+(3,  8,  'FAR-TS-003', 'Anantharam',     'Suryapet',    'Suryapet',            'Telangana', 5.00, 'Wheat (FAQ Standard)',   '8831', 'APPROVED', CURRENT_TIMESTAMP),
+(4,  9,  'FAR-TS-004', 'Dameracharla',   'Miryalaguda', 'Nalgonda',            'Telangana', 6.20, 'Paddy / Rice (Grade-A)', '7734', 'APPROVED', CURRENT_TIMESTAMP),
+(5,  10, 'FAR-TS-005', 'Tripuraram',     'Tripuraram',  'Nalgonda',            'Telangana', 8.00, 'Wheat (FAQ Standard)',   '9012', 'APPROVED', CURRENT_TIMESTAMP),
+(6,  11, 'FAR-TS-006', 'Gudur',          'Enumamula',   'Warangal',            'Telangana', 3.50, 'Maize (Yellow Corn)',    '3341', 'APPROVED', CURRENT_TIMESTAMP),
+(7,  12, 'FAR-TS-007', 'Atmakur',        'Atmakur',     'Warangal',            'Telangana', 4.00, 'Cotton (Medium Staple)', '2891', 'APPROVED', CURRENT_TIMESTAMP),
+(8,  13, 'FAR-TS-008', 'Sarapaka',       'Burgampahad', 'Bhadradri Kothagudem','Telangana', 2.50, 'Paddy / Rice (Common)',  '5521', 'APPROVED', CURRENT_TIMESTAMP),
+(9,  14, 'FAR-TS-009', 'Chivvemla',      'Chivvemla',   'Suryapet',            'Telangana', 3.80, 'Paddy / Rice (Grade-A)', '6612', 'APPROVED', CURRENT_TIMESTAMP),
+(10, 15, 'FAR-TS-010', 'Thallada',       'Thallada',    'Khammam',             'Telangana', 5.50, 'Maize (Yellow Corn)',    '1245', 'APPROVED', CURRENT_TIMESTAMP),
+(11, 16, 'FAR-TS-011', 'Tirumalagiri',   'Tirumalagiri','Suryapet',            'Telangana', 4.20, 'Paddy / Rice (Grade-A)', '9832', 'APPROVED', CURRENT_TIMESTAMP),
+(12, 17, 'FAR-TS-012', 'Mothey',         'Mothey',      'Suryapet',            'Telangana', 3.00, 'Paddy / Rice (Common)',  '4523', 'APPROVED', CURRENT_TIMESTAMP),
+(13, 18, 'FAR-TS-013', 'Garidepally',    'Garidepally', 'Suryapet',            'Telangana', 6.00, 'Paddy / Rice (Grade-A)', '7819', 'APPROVED', CURRENT_TIMESTAMP),
+(14, 19, 'FAR-TS-014', 'Nereducherla',   'Nereducherla','Suryapet',            'Telangana', 4.50, 'Wheat (FAQ Standard)',   '6634', 'APPROVED', CURRENT_TIMESTAMP),
+(15, 20, 'FAR-TS-015', 'Huzurnagar',     'Huzurnagar',  'Suryapet',            'Telangana', 7.00, 'Paddy / Rice (Grade-A)', '8812', 'APPROVED', CURRENT_TIMESTAMP),
+(16, 21, 'FAR-TS-016', 'Kodad',          'Kodad',       'Suryapet',            'Telangana', 5.20, 'Paddy / Rice (Grade-A)', '2234', 'APPROVED', CURRENT_TIMESTAMP),
+(17, 22, 'FAR-TS-017', 'Munagala',       'Munagala',    'Suryapet',            'Telangana', 3.40, 'Paddy / Rice (Common)',  '9081', 'APPROVED', CURRENT_TIMESTAMP),
+(18, 23, 'FAR-TS-018', 'Chilkur',        'Chilkur',     'Suryapet',            'Telangana', 4.80, 'Paddy / Rice (Grade-A)', '5543', 'APPROVED', CURRENT_TIMESTAMP),
+(19, 24, 'FAR-TS-019', 'Mellachervu',    'Mellachervu', 'Suryapet',            'Telangana', 6.50, 'Maize (Yellow Corn)',    '1123', 'APPROVED', CURRENT_TIMESTAMP),
+(20, 25, 'FAR-TS-020', 'Mattampally',    'Mattampally', 'Suryapet',            'Telangana', 3.20, 'Paddy / Rice (Grade-A)', '4490', 'APPROVED', CURRENT_TIMESTAMP),
+(21, 26, 'FAR-TS-021', 'Vemulapally',    'Vemulapally', 'Nalgonda',            'Telangana', 5.00, 'Paddy / Rice (Grade-A)', '7731', 'APPROVED', CURRENT_TIMESTAMP),
+(22, 27, 'FAR-TS-022', 'Miryalaguda Rural','Miryalaguda','Nalgonda',           'Telangana', 4.00, 'Paddy / Rice (Common)',  '3319', 'APPROVED', CURRENT_TIMESTAMP),
+(23, 28, 'FAR-TS-023', 'Rayanguda',      'Chivvemla',   'Suryapet',            'Telangana', 5.50, 'Paddy / Rice (Grade-A)', '9901', 'PENDING',  NULL),
+(24, 29, 'FAR-TS-024', 'Komativagu',     'Suryapet',    'Suryapet',            'Telangana', 3.75, 'Cotton (Medium Staple)', '8812', 'PENDING',  NULL);
 
-ALTER SEQUENCE farmers_id_seq RESTART WITH 23;
+ALTER SEQUENCE farmers_id_seq RESTART WITH 25;
 
 -- -----------------------------------------------------------------------------
 -- 4. PROCUREMENT SCHEDULES & TIME SLOTS
@@ -264,3 +269,17 @@ INSERT INTO notifications (user_id, title, message, notification_type, is_read) 
 (6, 'Digital Token Generated: A023', 'Your booking for Paddy procurement at Central Procurement Center - Suryapet is confirmed. Token A023 is scheduled for Afternoon Slot 1.', 'SCHEDULE', FALSE),
 (6, 'Queue Movement Alert', 'Procurement center has reached Token A018. You have 5 farmers ahead of you. Estimated wait: ~45 minutes.', 'TURN_ALERT', FALSE),
 (7, 'Procurement Completed Successfully', 'Your procurement transaction TXN-2026-0001 for 35.00 Quintals has been recorded. Payout of Rs 77,105 sent for DBT credit.', 'SUCCESS', TRUE);
+
+-- Reset all serial sequences to match maximum seeded IDs
+SELECT setval(pg_get_serial_sequence('users', 'id'), coalesce(max(id), 1)) FROM users;
+SELECT setval(pg_get_serial_sequence('procurement_centers', 'id'), coalesce(max(id), 1)) FROM procurement_centers;
+SELECT setval(pg_get_serial_sequence('officials', 'id'), coalesce(max(id), 1)) FROM officials;
+SELECT setval(pg_get_serial_sequence('farmers', 'id'), coalesce(max(id), 1)) FROM farmers;
+SELECT setval(pg_get_serial_sequence('commodities', 'id'), coalesce(max(id), 1)) FROM commodities;
+SELECT setval(pg_get_serial_sequence('procurement_schedules', 'id'), coalesce(max(id), 1)) FROM procurement_schedules;
+SELECT setval(pg_get_serial_sequence('time_slots', 'id'), coalesce(max(id), 1)) FROM time_slots;
+SELECT setval(pg_get_serial_sequence('tokens', 'id'), coalesce(max(id), 1)) FROM tokens;
+SELECT setval(pg_get_serial_sequence('procurement_transactions', 'id'), coalesce(max(id), 1)) FROM procurement_transactions;
+SELECT setval(pg_get_serial_sequence('notifications', 'id'), coalesce(max(id), 1)) FROM notifications;
+SELECT setval(pg_get_serial_sequence('announcements', 'id'), coalesce(max(id), 1)) FROM announcements;
+

@@ -41,6 +41,79 @@ async function loadProfile() {
                 avatarEmoji.style.display = "none";
             }
         }
+
+        // Render Approval Status Banner and Gate Booking
+        const banner = document.getElementById("farmer-approval-banner");
+        const btnBook = document.getElementById("btn-generate-token");
+        const note = document.getElementById("booking-approval-note");
+
+        if (currentProfile.approval_status === "PENDING") {
+            if (banner) {
+                banner.style.display = "block";
+                banner.innerHTML = `
+                    <div class="card" style="border-left: 5px solid #f59e0b; background: #fffbeb; padding: 18px 20px; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <span style="font-size: 2.2rem;">⏳</span>
+                            <div>
+                                <h3 style="color: #b45309; margin: 0 0 4px 0; font-size: 1.15rem;">Registration Approval Pending</h3>
+                                <p style="margin: 0; color: #78350f; font-size: 0.92rem; line-height: 1.4;">
+                                    Your farmer registration (ID: <strong>${currentProfile.farmer_code}</strong>) has been submitted and is currently awaiting verification by the State Agricultural Administrator.
+                                    Slot booking will unlock automatically once your registration is approved.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            if (btnBook) {
+                btnBook.disabled = true;
+                btnBook.textContent = "🔒 Booking Locked - Approval Pending";
+                btnBook.style.opacity = "0.6";
+                btnBook.style.cursor = "not-allowed";
+            }
+            if (note) {
+                note.style.display = "block";
+                note.style.color = "#b45309";
+                note.textContent = "⚠️ Only approved farmers can book procurement tokens. Status: PENDING";
+            }
+        } else if (currentProfile.approval_status === "REJECTED") {
+            if (banner) {
+                banner.style.display = "block";
+                banner.innerHTML = `
+                    <div class="card" style="border-left: 5px solid #ef4444; background: #fef2f2; padding: 18px 20px; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <span style="font-size: 2.2rem;">❌</span>
+                            <div>
+                                <h3 style="color: #b91c1c; margin: 0 0 4px 0; font-size: 1.15rem;">Registration Verification Rejected</h3>
+                                <p style="margin: 0; color: #7f1d1d; font-size: 0.92rem; line-height: 1.4;">
+                                    Your profile registration was not approved by the State Administrator. Reason: <strong>${currentProfile.approval_remarks || 'Discrepancy in revenue records'}</strong>. Please visit your Central Office to rectify your details.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            if (btnBook) {
+                btnBook.disabled = true;
+                btnBook.textContent = "❌ Booking Disabled - Registration Rejected";
+                btnBook.style.opacity = "0.6";
+                btnBook.style.cursor = "not-allowed";
+            }
+            if (note) {
+                note.style.display = "block";
+                note.style.color = "#dc2626";
+                note.textContent = `❌ Reason: ${currentProfile.approval_remarks || 'Document mismatch'}`;
+            }
+        } else {
+            if (banner) banner.style.display = "none";
+            if (btnBook) {
+                btnBook.disabled = false;
+                btnBook.textContent = "Generate Digital Token";
+                btnBook.style.opacity = "1";
+                btnBook.style.cursor = "pointer";
+            }
+            if (note) note.style.display = "none";
+        }
     } catch (e) {
         console.error("Failed to load profile:", e);
     }
@@ -254,6 +327,11 @@ async function fetchAvailableSchedules() {
 
 async function handleBookSlot(e) {
     e.preventDefault();
+    if (currentProfile && currentProfile.approval_status !== "APPROVED") {
+        App.showToast(`Cannot book slot: Your registration status is "${currentProfile.approval_status}". Only approved farmers can book tokens.`, "alert");
+        return;
+    }
+
     const commodityId = document.getElementById("book-commodity").value;
     const qty = document.getElementById("book-qty").value;
     const vehicle = document.getElementById("book-vehicle").value.trim();

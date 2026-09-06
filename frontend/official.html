@@ -159,6 +159,48 @@
                 </table>
             </div>
         </div>
+
+        <!-- 4. FARMER REGISTRY MANAGEMENT -->
+        <div class="card" id="official-farmers-section" style="border-top: 4px solid var(--accent-gold); margin-top: 24px;">
+            <div class="card-header">
+                <div>
+                    <h2>👨‍🌾 <span data-i18n="farmer_registry">Farmer Registry & Certificate Management</span></h2>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
+                        Enroll new farmers, update existing records, and download official printed Registration Forms.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <input type="text" id="official-farmer-search" class="form-control" style="min-height: 38px; width: 220px;" placeholder="Search farmer, code, phone..." onkeyup="filterOfficialFarmersTable()">
+                    <button class="btn btn-primary" onclick="openOfficialCreateFarmerModal()">
+                        ➕ Register New Farmer
+                    </button>
+                    <button class="btn btn-outline" onclick="loadOfficialFarmers()">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="official-farmers-table">
+                    <thead>
+                        <tr>
+                            <th>Farmer Code</th>
+                            <th>Full Name</th>
+                            <th>Contact</th>
+                            <th>Aadhaar</th>
+                            <th>Location</th>
+                            <th>Land (Acres)</th>
+                            <th>Primary Crop</th>
+                            <th>Approval Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="official-farmers-body">
+                        <tr><td colspan="9" style="text-align: center; padding: 20px;">Loading center farmer registry...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </main>
 
     <!-- 4. MODAL: COMPLETE WEIGHING & TRANSACTION -->
@@ -252,6 +294,295 @@
                     <button type="button" class="btn btn-outline" onclick="closeAnnouncementModal()">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: OFFICIAL CREATE FARMER -->
+    <div id="official-create-farmer-modal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3>➕ Register New Farmer</h3>
+                <button class="btn-close" onclick="closeOfficialCreateFarmerModal()">&times;</button>
+            </div>
+            <form id="official-create-farmer-form" onsubmit="handleOfficialCreateFarmer(event)">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem; color: #166534;">
+                    ℹ️ Newly enrolled farmers will be registered with <strong>PENDING</strong> status and queued for State Administrator verification.
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Username *</label>
+                        <input type="text" id="official-farmer-create-username" class="form-control" placeholder="e.g. farmer_ramesh" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Password *</label>
+                        <input type="password" id="official-farmer-create-password" class="form-control" placeholder="Min 6 chars" minlength="6" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Full Name *</label>
+                        <input type="text" id="official-farmer-create-fullname" class="form-control" placeholder="e.g. Ramesh Reddy" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Phone Number *</label>
+                        <input type="tel" id="official-farmer-create-phone" class="form-control" placeholder="10-digit mobile" pattern="[0-9]{10}" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Aadhaar Number *</label>
+                        <input type="text" id="official-farmer-create-aadhaar" class="form-control" placeholder="12-digit Aadhaar" pattern="[0-9]{12}" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Email (Optional)</label>
+                        <input type="email" id="official-farmer-create-email" class="form-control" placeholder="farmer@example.com">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Village *</label>
+                        <input type="text" id="official-farmer-create-village" class="form-control" placeholder="Village" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Mandal *</label>
+                        <input type="text" id="official-farmer-create-mandal" class="form-control" placeholder="Mandal" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">District *</label>
+                        <input type="text" id="official-farmer-create-district" class="form-control" placeholder="District" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Land (Acres) *</label>
+                        <input type="number" step="0.01" min="0.1" id="official-farmer-create-land" class="form-control" placeholder="e.g. 5.5" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Passbook No *</label>
+                        <input type="text" id="official-farmer-create-passbook" class="form-control" placeholder="e.g. PB-98765" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Primary Crop *</label>
+                        <input type="text" id="official-farmer-create-crop" class="form-control" placeholder="e.g. Paddy" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Account *</label>
+                        <input type="text" id="official-farmer-create-bank-acc" class="form-control" placeholder="Account Number" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank IFSC *</label>
+                        <input type="text" id="official-farmer-create-bank-ifsc" class="form-control" placeholder="e.g. SBIN0001234" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Name *</label>
+                        <input type="text" id="official-farmer-create-bank-name" class="form-control" placeholder="e.g. State Bank of India" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn btn-outline" onclick="closeOfficialCreateFarmerModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">➕ Enroll Farmer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: OFFICIAL EDIT FARMER -->
+    <div id="official-edit-farmer-modal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3>✏️ Edit Farmer Profile</h3>
+                <button class="btn-close" onclick="closeOfficialEditFarmerModal()">&times;</button>
+            </div>
+            <form id="official-edit-farmer-form" onsubmit="handleOfficialUpdateFarmer(event)">
+                <input type="hidden" id="official-farmer-edit-id">
+                <div style="background: var(--bg-card); padding: 8px 12px; border-radius: var(--radius-md); margin-bottom: 12px; font-size: 0.88rem; border: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+                    <div>Farmer Code: <strong id="official-farmer-edit-code-disp">-</strong></div>
+                    <div>Status: <span id="official-farmer-edit-status-badge" class="badge badge-live">-</span></div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Full Name *</label>
+                        <input type="text" id="official-farmer-edit-fullname" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Phone Number *</label>
+                        <input type="tel" id="official-farmer-edit-phone" class="form-control" pattern="[0-9]{10}" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Village *</label>
+                        <input type="text" id="official-farmer-edit-village" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Mandal *</label>
+                        <input type="text" id="official-farmer-edit-mandal" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">District *</label>
+                        <input type="text" id="official-farmer-edit-district" class="form-control" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Land (Acres) *</label>
+                        <input type="number" step="0.01" min="0.1" id="official-farmer-edit-land" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Passbook No *</label>
+                        <input type="text" id="official-farmer-edit-passbook" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Primary Crop *</label>
+                        <input type="text" id="official-farmer-edit-crop" class="form-control" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Account *</label>
+                        <input type="text" id="official-farmer-edit-bank-acc" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank IFSC *</label>
+                        <input type="text" id="official-farmer-edit-bank-ifsc" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Name *</label>
+                        <input type="text" id="official-farmer-edit-bank-name" class="form-control" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn btn-outline" onclick="closeOfficialEditFarmerModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">💾 Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PRINTABLE FARMER REGISTRATION CERTIFICATE / FORM -->
+    <div id="official-farmer-form-modal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="max-width: 800px; max-height: 92vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>📄 Official Farmer Registration Certificate</h3>
+                <button class="btn-close" onclick="closeFarmerRegistrationFormModal()">&times;</button>
+            </div>
+
+            <div id="printable-cert-area" class="registration-certificate" style="margin-bottom: 20px;">
+                <!-- Emblem & Header -->
+                <div class="cert-header">
+                    <div class="cert-emblem">🏛️</div>
+                    <div style="font-size: 0.85rem; font-weight: 700; color: #475569; letter-spacing: 0.5px;">GOVERNMENT OF INDIA • MINISTRY OF CONSUMER AFFAIRS, FOOD & PUBLIC DISTRIBUTION</div>
+                    <div class="cert-title">Farmer Procurement Registration Certificate</div>
+                    <div class="cert-subtitle">State Agriculture & Civil Supplies Directorate • Live Enrollment System</div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.82rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 6px;">
+                        <span>Form Ref: <strong id="cert-ref-number">SIH-REG-0000</strong></span>
+                        <span>Date Issued: <strong id="cert-issue-date">-</strong></span>
+                    </div>
+                </div>
+
+                <!-- Fields Grid -->
+                <div class="cert-grid">
+                    <div class="cert-field">
+                        <div class="cert-field-label">Farmer Full Name</div>
+                        <div class="cert-field-value" id="cert-farmer-name">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Farmer Identification Code</div>
+                        <div class="cert-field-value" style="color: #0f5132;" id="cert-farmer-code">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Aadhaar Reference</div>
+                        <div class="cert-field-value" id="cert-aadhaar">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Contact Mobile</div>
+                        <div class="cert-field-value" id="cert-phone">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Village & Mandal</div>
+                        <div class="cert-field-value" id="cert-village-mandal">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">District & State</div>
+                        <div class="cert-field-value" id="cert-district-state">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Cultivable Land Area</div>
+                        <div class="cert-field-value" id="cert-land-area">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Pattadar Passbook No</div>
+                        <div class="cert-field-value" id="cert-passbook">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Primary Notified Crop</div>
+                        <div class="cert-field-value" id="cert-crop">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Designated Procurement Center</div>
+                        <div class="cert-field-value" id="cert-center">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Bank Account (DBT Linked)</div>
+                        <div class="cert-field-value" id="cert-bank-acc">-</div>
+                    </div>
+                    <div class="cert-field">
+                        <div class="cert-field-label">Bank IFSC & Branch</div>
+                        <div class="cert-field-value" id="cert-bank-ifsc">-</div>
+                    </div>
+                </div>
+
+                <!-- Status Banner -->
+                <div id="cert-status-banner" style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; color: #166534; font-weight: 700;">State Admin Approval Status</div>
+                        <div id="cert-approval-status" style="font-size: 1.1rem; font-weight: 800; color: #15803d;">APPROVED</div>
+                    </div>
+                    <div id="cert-approval-remarks-container" style="text-align: right; font-size: 0.85rem; color: #475569;">
+                        Remarks: <span id="cert-approval-remarks">Verified with Revenue Land Records</span>
+                    </div>
+                </div>
+
+                <!-- Seal and Signatures -->
+                <div class="cert-seal-section">
+                    <div class="cert-stamp-box">
+                        <div>🇮🇳 GOVT. OF TELANGANA</div>
+                        <div style="font-size: 0.75rem;">CIVIL SUPPLIES DEPT</div>
+                        <div style="font-size: 0.7rem; color: #64748b;">OFFICIAL PROCUREMENT SEAL</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.8rem;">📑</div>
+                        <div style="font-size: 0.75rem; color: #64748b;">Digitally Signed Record</div>
+                    </div>
+                    <div class="cert-signature">
+                        <div style="font-weight: 700; color: #0f172a;" id="cert-officer-name">Central Office Officer</div>
+                        <div style="font-size: 0.75rem; color: #64748b;">Authorized Signatory</div>
+                        <div style="font-size: 0.75rem; color: #64748b;" id="cert-sign-date">State Procurement Center</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Action Bar -->
+            <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+                <button type="button" class="btn btn-outline" onclick="closeFarmerRegistrationFormModal()">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printFarmerForm()">
+                    🖨️ Print / Download Registration Form
+                </button>
+            </div>
         </div>
     </div>
 

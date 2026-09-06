@@ -67,10 +67,13 @@ class Farmer(Base):
     primary_crop = Column(String(64), nullable=False, default="Paddy")
     bank_account_last4 = Column(String(4), nullable=True)
     profile_image_url = Column(Text, nullable=True)
+    approval_status = Column(String(32), nullable=False, default="PENDING", index=True) # PENDING, APPROVED, REJECTED
+    approval_remarks = Column(Text, nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
     user = relationship("User", back_populates="farmer_profile")
-    bookings = relationship("Booking", back_populates="farmer")
+    bookings = relationship("Booking", back_populates="farmer", cascade="all, delete-orphan")
 
 
 class Official(Base):

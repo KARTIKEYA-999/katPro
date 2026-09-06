@@ -5,7 +5,18 @@
 
 let officialCenterId = null;
 let currentQueueItems = [];
+let officialFarmers = [];
 let wsClient = null;
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 // 1. Load Official Dashboard Stats
 async function loadDashboard() {
@@ -272,8 +283,291 @@ function handleOfficialWsEvent(evt) {
     }
 }
 
+// 11. Center Farmer Registry Management
+async function loadOfficialFarmers() {
+    const tbody = document.getElementById("official-farmers-body");
+    if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading center farmer registry...</td></tr>`;
+
+    try {
+        const farmers = await App.fetch("/api/official/farmers");
+        officialFarmers = farmers;
+        renderOfficialFarmersTable(farmers);
+    } catch (e) {
+        console.error("Failed to load official farmers:", e);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--danger-color); padding: 20px;">Failed to load farmers: ${e.message}</td></tr>`;
+    }
+}
+
+function renderOfficialFarmersTable(farmers) {
+    const tbody = document.getElementById("official-farmers-body");
+    if (!tbody) return;
+
+    if (!farmers || farmers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">No farmers enrolled under this procurement center yet. Click "Register New Farmer" to add one.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = farmers.map(f => {
+        let statusBadge = "badge-live";
+        if (f.approval_status === "PENDING") statusBadge = "badge-warning";
+        else if (f.approval_status === "REJECTED") statusBadge = "badge-danger";
+
+        return `
+            <tr id="row-farmer-${f.id}">
+                <td><strong style="color: var(--primary-color);">${escapeHtml(f.farmer_code)}</strong></td>
+                <td><strong>${escapeHtml(f.full_name)}</strong></td>
+                <td>${escapeHtml(f.phone)}</td>
+                <td>${escapeHtml(f.aadhaar_number || '-')}</td>
+                <td>${escapeHtml(f.village)}, ${escapeHtml(f.mandal || '')}</td>
+                <td><strong>${f.land_area_acres}</strong></td>
+                <td>${escapeHtml(f.primary_crop || '-')}</td>
+                <td>
+                    <span class="badge ${statusBadge}">${f.approval_status}</span>
+                    ${f.approval_status === 'REJECTED' && f.approval_remarks ? `
+                        <div style="font-size: 0.75rem; color: #dc2626; margin-top: 2px;">
+                            ${escapeHtml(f.approval_remarks)}
+                        </div>
+                    ` : ''}
+                </td>
+                <td>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openFarmerRegistrationFormModal(${f.id})">
+                            📄 Form
+                        </button>
+                        <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openOfficialEditFarmerModal(${f.id})">
+                            ✏️ Edit
+                        </button>
+                        <button class="btn btn-danger" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="deleteOfficialFarmer(${f.id}, '${escapeHtml(f.full_name)}')">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterOfficialFarmersTable() {
+    const q = (document.getElementById("official-farmer-search").value || "").toLowerCase();
+    const filtered = officialFarmers.filter(f =>
+        f.full_name.toLowerCase().includes(q) ||
+        f.farmer_code.toLowerCase().includes(q) ||
+        (f.phone && f.phone.includes(q)) ||
+        (f.village && f.village.toLowerCase().includes(q))
+    );
+    renderOfficialFarmersTable(filtered);
+}
+
+function openOfficialCreateFarmerModal() {
+    const modal = document.getElementById("official-create-farmer-modal");
+    if (modal) {
+        document.getElementById("official-create-farmer-form").reset();
+        modal.style.display = "flex";
+    }
+}
+
+function closeOfficialCreateFarmerModal() {
+    const modal = document.getElementById("official-create-farmer-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function handleOfficialCreateFarmer(e) {
+    e.preventDefault();
+    const username = document.getElementById("official-farmer-create-username").value.trim();
+    const password = document.getElementById("official-farmer-create-password").value;
+    const fullName = document.getElementById("official-farmer-create-fullname").value.trim();
+    const phone = document.getElementById("official-farmer-create-phone").value.trim();
+    const email = document.getElementById("official-farmer-create-email").value.trim();
+    const aadhaar = document.getElementById("official-farmer-create-aadhaar").value.trim();
+    const village = document.getElementById("official-farmer-create-village").value.trim();
+    const mandal = document.getElementById("official-farmer-create-mandal").value.trim();
+    const district = document.getElementById("official-farmer-create-district").value.trim();
+    const land = document.getElementById("official-farmer-create-land").value;
+    const passbook = document.getElementById("official-farmer-create-passbook").value.trim();
+    const crop = document.getElementById("official-farmer-create-crop").value.trim();
+    const bankAcc = document.getElementById("official-farmer-create-bank-acc").value.trim();
+    const bankIfsc = document.getElementById("official-farmer-create-bank-ifsc").value.trim();
+    const bankName = document.getElementById("official-farmer-create-bank-name").value.trim();
+
+    try {
+        await App.fetch("/api/official/farmers", {
+            method: "POST",
+            body: JSON.stringify({
+                username,
+                password,
+                full_name: fullName,
+                phone,
+                email: email || null,
+                aadhaar_number: aadhaar,
+                village,
+                mandal,
+                district,
+                pincode: "508213",
+                land_area_acres: parseFloat(land),
+                passbook_number: passbook,
+                primary_crop: crop,
+                bank_account_number: bankAcc,
+                bank_ifsc_code: bankIfsc,
+                bank_name: bankName
+            })
+        });
+
+        App.showToast(`Farmer ${fullName} enrolled! Status is PENDING for State Admin approval.`, "success");
+        closeOfficialCreateFarmerModal();
+        await loadOfficialFarmers();
+    } catch (err) {
+        App.showToast(`Failed to register farmer: ${err.message}`, "alert");
+    }
+}
+
+function openOfficialEditFarmerModal(farmerId) {
+    const farmer = officialFarmers.find(f => f.id === farmerId);
+    if (!farmer) return;
+
+    document.getElementById("official-farmer-edit-id").value = farmer.id;
+    document.getElementById("official-farmer-edit-code-disp").textContent = farmer.farmer_code;
+    const statusBadge = document.getElementById("official-farmer-edit-status-badge");
+    statusBadge.textContent = farmer.approval_status;
+    statusBadge.className = farmer.approval_status === "APPROVED" ? "badge badge-live" : (farmer.approval_status === "PENDING" ? "badge badge-warning" : "badge badge-danger");
+
+    document.getElementById("official-farmer-edit-fullname").value = farmer.full_name;
+    document.getElementById("official-farmer-edit-phone").value = farmer.phone;
+    document.getElementById("official-farmer-edit-village").value = farmer.village;
+    document.getElementById("official-farmer-edit-mandal").value = farmer.mandal || "";
+    document.getElementById("official-farmer-edit-district").value = farmer.district;
+    document.getElementById("official-farmer-edit-land").value = farmer.land_area_acres;
+    document.getElementById("official-farmer-edit-passbook").value = farmer.passbook_number || "";
+    document.getElementById("official-farmer-edit-crop").value = farmer.primary_crop || "";
+    document.getElementById("official-farmer-edit-bank-acc").value = farmer.bank_account_number || "";
+    document.getElementById("official-farmer-edit-bank-ifsc").value = farmer.bank_ifsc_code || "";
+    document.getElementById("official-farmer-edit-bank-name").value = farmer.bank_name || "";
+
+    document.getElementById("official-edit-farmer-modal").style.display = "flex";
+}
+
+function closeOfficialEditFarmerModal() {
+    const modal = document.getElementById("official-edit-farmer-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function handleOfficialUpdateFarmer(e) {
+    e.preventDefault();
+    const farmerId = document.getElementById("official-farmer-edit-id").value;
+    const fullName = document.getElementById("official-farmer-edit-fullname").value.trim();
+    const phone = document.getElementById("official-farmer-edit-phone").value.trim();
+    const village = document.getElementById("official-farmer-edit-village").value.trim();
+    const mandal = document.getElementById("official-farmer-edit-mandal").value.trim();
+    const district = document.getElementById("official-farmer-edit-district").value.trim();
+    const land = document.getElementById("official-farmer-edit-land").value;
+    const passbook = document.getElementById("official-farmer-edit-passbook").value.trim();
+    const crop = document.getElementById("official-farmer-edit-crop").value.trim();
+    const bankAcc = document.getElementById("official-farmer-edit-bank-acc").value.trim();
+    const bankIfsc = document.getElementById("official-farmer-edit-bank-ifsc").value.trim();
+    const bankName = document.getElementById("official-farmer-edit-bank-name").value.trim();
+
+    try {
+        await App.fetch(`/api/official/farmers/${farmerId}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                full_name: fullName,
+                phone,
+                village,
+                mandal,
+                district,
+                land_area_acres: parseFloat(land),
+                passbook_number: passbook,
+                primary_crop: crop,
+                bank_account_number: bankAcc,
+                bank_ifsc_code: bankIfsc,
+                bank_name: bankName
+            })
+        });
+
+        App.showToast("Farmer profile updated successfully!", "success");
+        closeOfficialEditFarmerModal();
+        await loadOfficialFarmers();
+    } catch (err) {
+        App.showToast(`Failed to update farmer: ${err.message}`, "alert");
+    }
+}
+
+async function deleteOfficialFarmer(farmerId, farmerName) {
+    if (!confirm(`Are you sure you want to delete farmer "${farmerName}"? This will permanently remove their records.`)) return;
+
+    try {
+        const res = await App.fetch(`/api/official/farmers/${farmerId}`, {
+            method: "DELETE"
+        });
+        App.showToast(res.message || "Farmer profile removed successfully.", "success");
+        await loadOfficialFarmers();
+    } catch (err) {
+        App.showToast(`Failed to delete farmer: ${err.message}`, "alert");
+    }
+}
+
+// 12. Printable Registration Form & Certificate
+async function openFarmerRegistrationFormModal(farmerId) {
+    try {
+        const data = await App.fetch(`/api/official/farmers/${farmerId}/form-data`);
+        
+        document.getElementById("cert-ref-number").textContent = `SIH-REG-${data.farmer_code}`;
+        document.getElementById("cert-issue-date").textContent = new Date().toLocaleDateString('en-IN', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        document.getElementById("cert-farmer-name").textContent = data.full_name;
+        document.getElementById("cert-farmer-code").textContent = data.farmer_code;
+        document.getElementById("cert-aadhaar").textContent = `XXXX-XXXX-${data.aadhaar_last4}`;
+        document.getElementById("cert-phone").textContent = data.phone;
+        document.getElementById("cert-village-mandal").textContent = `${data.village}, ${data.mandal || '-'}`;
+        document.getElementById("cert-district-state").textContent = `${data.district}, ${data.state}`;
+        document.getElementById("cert-land-area").textContent = `${data.land_area_acres} Acres`;
+        document.getElementById("cert-passbook").textContent = data.passbook_number || '-';
+        document.getElementById("cert-crop").textContent = data.primary_crop || '-';
+        document.getElementById("cert-center").textContent = `${data.center_name} (${data.center_code})`;
+        document.getElementById("cert-bank-acc").textContent = data.bank_account_number ? `XXXX-XXXX-${data.bank_account_number.slice(-4)}` : '-';
+        document.getElementById("cert-bank-ifsc").textContent = `${data.bank_ifsc_code || '-'} (${data.bank_name || '-'})`;
+
+        const statusEl = document.getElementById("cert-approval-status");
+        const statusBanner = document.getElementById("cert-status-banner");
+        statusEl.textContent = data.approval_status;
+        if (data.approval_status === "APPROVED") {
+            statusBanner.style.background = "#f0fdf4";
+            statusBanner.style.borderColor = "#86efac";
+            statusEl.style.color = "#15803d";
+        } else if (data.approval_status === "PENDING") {
+            statusBanner.style.background = "#fffbeb";
+            statusBanner.style.borderColor = "#fde68a";
+            statusEl.style.color = "#b45309";
+        } else {
+            statusBanner.style.background = "#fef2f2";
+            statusBanner.style.borderColor = "#fecaca";
+            statusEl.style.color = "#b91c1c";
+        }
+
+        document.getElementById("cert-approval-remarks").textContent = data.approval_remarks || (data.approval_status === "APPROVED" ? "Verified with Land Revenue (Pahani) Records" : "Pending State Admin Verification");
+        document.getElementById("cert-officer-name").textContent = `${data.center_name} Control Room`;
+        document.getElementById("cert-sign-date").textContent = `Verified on ${new Date().toLocaleDateString()}`;
+
+        document.getElementById("official-farmer-form-modal").style.display = "flex";
+    } catch (err) {
+        App.showToast(`Failed to load registration certificate: ${err.message}`, "alert");
+    }
+}
+
+function closeFarmerRegistrationFormModal() {
+    const modal = document.getElementById("official-farmer-form-modal");
+    if (modal) modal.style.display = "none";
+}
+
+function printFarmerForm() {
+    window.print();
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     if (!App.checkAuthRedirect("OFFICIAL")) return;
     await loadDashboard();
     await loadQueueRoster();
+    await loadOfficialFarmers();
 });
+

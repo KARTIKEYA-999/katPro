@@ -6,13 +6,15 @@ from sqlalchemy import func
 from backend.app.database import get_db
 from backend.app.models import (
     User, Farmer, Official, ProcurementCenter, Commodity,
-    ProcurementSchedule, TimeSlot, Booking, Token, ProcurementTransaction, AuditLog
+    ProcurementSchedule, TimeSlot, Booking, Token, ProcurementTransaction, AuditLog,
+    Notification
 )
 from backend.app.schemas import (
     CenterOut, CenterCreate, OptimizationRunRequest, OptimizationRunResponse,
-    ScheduleCreate, ScheduleUpdate, ScheduleOut, TimeSlotOut, CommodityOut
+    ScheduleCreate, ScheduleUpdate, ScheduleOut, TimeSlotOut, CommodityOut,
+    OfficialCreate, OfficialUpdate, OfficialDetailOut, FarmerDetailOut, FarmerApprovalAction
 )
-from backend.app.auth import require_admin
+from backend.app.auth import require_admin, get_password_hash
 from backend.app.cpp_bridge import run_center_workload_optimization, run_procurement_day_simulation
 
 router = APIRouter(prefix="/api/admin", tags=["Admin Module"])
@@ -160,6 +162,265 @@ def toggle_user_status(
     user.is_active = is_active
     db.commit()
     return {"message": f"User {user.username} active status set to {is_active}"}
+
+# --- CENTRAL OFFICE (OFFICIAL) USER MANAGEMENT ---
+
+@router.get("/officials", response_model=List[OfficialDetailOut])
+def get_admin_officials(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Admin: Lists all Central Office officials with center details"""
+    officials = db.query(Official).join(User).order_by(Official.id.asc()).all()
+    res = []
+    for off in officials:
+        u = off.user
+        res.append(OfficialDetailOut(
+            id=off.id,
+            user_id=u.id,
+            username=u.username,
+            full_name=u.full_name,
+            phone=u.phone,
+            email=u.email,
+            center_id=off.center_id,
+            center_name=off.center.name if off.center else None,
+            center_code=off.center.center_code if off.center else None,
+            employee_code=off.employee_code,
+            designation=off.designation,
+            is_active=u.is_active,
+            created_at=u.created_at
+        ))
+    return res
+
+@router.post("/officials", response_model=OfficialDetailOut, status_code=status.HTTP_201_CREATED)
+def create_admin_official(
+    req: OfficialCreate,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Admin: Creates a new Central Office user linked to a procurement center"""
+    if db.query(User).filter(User.username == req.username).first():
+        raise HTTPException(status_code=400, detail="Username already registered")
+    if db.query(User).filter(User.phone == req.phone).first():
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+
+    center = db.query(ProcurementCenter).filter(ProcurementCenter.id == req.center_id).first()
+    if not center:
+        raise HTTPException(status_code=404, detail="Selected procurement center not found")
+
+    new_user = User(
+        username=req.username,
+        password_hash=get_password_hash(req.password),
+        role="OFFICIAL",
+        full_name=req.full_name,
+        phone=req.phone,
+        email=req.email,
+        language_pref="en",
+        is_active=True
+    )
+    db.add(new_user)
+    db.flush()
+
+    emp_code = req.employee_code or f"OFF-{center.center_code.split('-')[-1]}-{new_user.id:03d}"
+    official = Official(
+        user_id=new_user.id,
+        center_id=center.id,
+        employee_code=emp_code,
+        designation=req.designation or "Procurement Officer"
+    )
+    db.add(official)
+    db.commit()
+    db.refresh(official)
+
+    return OfficialDetailOut(
+        id=official.id,
+        user_id=new_user.id,
+        username=new_user.username,
+        full_name=new_user.full_name,
+        phone=new_user.phone,
+        email=new_user.email,
+        center_id=center.id,
+        center_name=center.name,
+        center_code=center.center_code,
+        employee_code=official.employee_code,
+        designation=official.designation,
+        is_active=new_user.is_active,
+        created_at=new_user.created_at
+    )
+
+@router.put("/officials/{official_id}", response_model=OfficialDetailOut)
+def update_admin_official(
+    official_id: int,
+    req: OfficialUpdate,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Admin: Updates an existing Central Office official's profile or center assignment"""
+    official = db.query(Official).filter(Official.id == official_id).first()
+    if not official:
+        raise HTTPException(status_code=404, detail="Official not found")
+    user = official.user
+
+    if req.center_id is not None:
+        center = db.query(ProcurementCenter).filter(ProcurementCenter.id == req.center_id).first()
+        if not center:
+            raise HTTPException(status_code=404, detail="Selected procurement center not found")
+        official.center_id = center.id
+
+    if req.designation is not None:
+        official.designation = req.designation
+    if req.employee_code is not None:
+        official.employee_code = req.employee_code
+
+    if req.full_name is not None:
+        user.full_name = req.full_name
+    if req.phone is not None:
+        user.phone = req.phone
+    if req.email is not None:
+        user.email = req.email
+    if req.is_active is not None:
+        user.is_active = req.is_active
+    if req.password and req.password.strip():
+        user.password_hash = get_password_hash(req.password.strip())
+
+    db.commit()
+    db.refresh(official)
+
+    return OfficialDetailOut(
+        id=official.id,
+        user_id=user.id,
+        username=user.username,
+        full_name=user.full_name,
+        phone=user.phone,
+        email=user.email,
+        center_id=official.center_id,
+        center_name=official.center.name if official.center else None,
+        center_code=official.center.center_code if official.center else None,
+        employee_code=official.employee_code,
+        designation=official.designation,
+        is_active=user.is_active,
+        created_at=user.created_at
+    )
+
+@router.delete("/officials/{official_id}")
+def delete_admin_official(
+    official_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Admin: Deletes a Central Office official account"""
+    official = db.query(Official).filter(Official.id == official_id).first()
+    if not official:
+        raise HTTPException(status_code=404, detail="Official not found")
+    user = official.user
+    username = user.username
+    db.delete(official)
+    db.delete(user)
+    db.commit()
+    return {"message": f"Central Office user {username} deleted successfully", "success": True}
+
+
+# --- FARMER VERIFICATION & APPROVAL QUEUE ---
+
+@router.get("/farmers", response_model=List[FarmerDetailOut])
+def get_admin_farmers(
+    approval_status: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Admin: Lists all registered farmers with verification and approval statuses"""
+    query = db.query(Farmer).join(User)
+    if approval_status and approval_status.upper() != "ALL":
+        query = query.filter(Farmer.approval_status == approval_status.upper())
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            (User.full_name.ilike(term)) |
+            (Farmer.farmer_code.ilike(term)) |
+            (User.phone.ilike(term)) |
+            (Farmer.village.ilike(term))
+        )
+
+    farmers = query.order_by(Farmer.created_at.desc()).all()
+    return [
+        FarmerDetailOut(
+            id=f.id,
+            user_id=f.user_id,
+            username=f.user.username,
+            farmer_code=f.farmer_code,
+            full_name=f.user.full_name,
+            phone=f.user.phone,
+            email=f.user.email,
+            village=f.village,
+            mandal=f.mandal,
+            district=f.district,
+            state=f.state,
+            land_size_acres=float(f.land_size_acres),
+            primary_crop=f.primary_crop,
+            bank_account_last4=f.bank_account_last4,
+            profile_image_url=f.profile_image_url,
+            approval_status=f.approval_status,
+            approval_remarks=f.approval_remarks,
+            approved_at=f.approved_at,
+            created_at=f.created_at,
+            is_active=f.user.is_active
+        )
+        for f in farmers
+    ]
+
+@router.put("/farmers/{farmer_id}/approve")
+def approve_farmer_registration(
+    farmer_id: int,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Admin: Approves a registered farmer and sends approval notification"""
+    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+
+    farmer.approval_status = "APPROVED"
+    farmer.approved_at = datetime.utcnow()
+    farmer.approval_remarks = None
+
+    # Dispatch notification to farmer
+    notif = Notification(
+        user_id=farmer.user_id,
+        title="Farmer Registration Approved ✅",
+        message="Congratulations! Your farmer account has been approved by the State Administrator. You are now authorized to book procurement slots and generate digital tokens.",
+        notification_type="APPROVAL"
+    )
+    db.add(notif)
+    db.commit()
+    return {"message": f"Farmer {farmer.farmer_code} ({farmer.user.full_name}) approved successfully", "approval_status": "APPROVED"}
+
+@router.put("/farmers/{farmer_id}/reject")
+def reject_farmer_registration(
+    farmer_id: int,
+    req: FarmerApprovalAction,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Admin: Rejects a registered farmer with remarks and sends rejection notification"""
+    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+
+    reason = req.remarks.strip() if req.remarks and req.remarks.strip() else "Land revenue or Aadhaar verification check did not match state records."
+    farmer.approval_status = "REJECTED"
+    farmer.approval_remarks = reason
+
+    # Dispatch notification to farmer
+    notif = Notification(
+        user_id=farmer.user_id,
+        title="Farmer Registration Rejected ❌",
+        message=f"Your farmer account registration was rejected by the State Administrator. Reason: {reason}. Please contact your Mandi Central Office for verification.",
+        notification_type="REJECTION"
+    )
+    db.add(notif)
+    db.commit()
+    return {"message": f"Farmer {farmer.farmer_code} rejected", "approval_status": "REJECTED", "remarks": reason}
 
 @router.get("/reports")
 def get_analytics_reports(

@@ -3,6 +3,19 @@
  * Analytics charts, C++ optimization runner, centers & user management
  */
 
+let adminOfficials = [];
+let adminFarmers = [];
+
+function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // 1. Load Admin Dashboard KPIs
 async function loadAdminKPIs() {
     try {
@@ -189,6 +202,18 @@ async function loadCentersTable() {
         const createCenterSelect = document.getElementById("admin-create-center");
         if (createCenterSelect) {
             createCenterSelect.innerHTML = `<option value="">Select Center</option>` +
+                centers.map(c => `<option value="${c.id}">${c.name} (${c.district})</option>`).join('');
+        }
+
+        // Populate Center dropdowns for Official Modals
+        const officialCreateCenter = document.getElementById("admin-official-create-center");
+        if (officialCreateCenter) {
+            officialCreateCenter.innerHTML = `<option value="">Select Procurement Center</option>` +
+                centers.map(c => `<option value="${c.id}">${c.name} (${c.district})</option>`).join('');
+        }
+        const officialEditCenter = document.getElementById("admin-official-edit-center");
+        if (officialEditCenter) {
+            officialEditCenter.innerHTML = `<option value="">Select Procurement Center</option>` +
                 centers.map(c => `<option value="${c.id}">${c.name} (${c.district})</option>`).join('');
         }
     } catch (e) {
@@ -442,13 +467,309 @@ async function loadUsers() {
     }
 }
 
-async function toggleUserStatus(userId, newStatus) {
+// 9. Central Office Users Management
+async function loadAdminOfficials() {
+    const tbody = document.getElementById("admin-officials-body");
+    if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading Central Office users...</td></tr>`;
+
     try {
-        await App.fetch(`/api/admin/users/${userId}/status?is_active=${newStatus}`, { method: "PUT" });
-        App.showToast("User status updated", "success");
-        await loadUsers();
+        const officials = await App.fetch("/api/admin/officials");
+        adminOfficials = officials;
+        renderAdminOfficialsTable(officials);
     } catch (e) {
-        App.showToast(e.message, "alert");
+        console.error("Failed to load officials:", e);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--danger-color); padding: 20px;">Failed to load Central Office users: ${e.message}</td></tr>`;
+    }
+}
+
+function renderAdminOfficialsTable(officials) {
+    const tbody = document.getElementById("admin-officials-body");
+    if (!tbody) return;
+
+    if (!officials || officials.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">No Central Office users found. Click "Add Central Office User" to create one.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = officials.map(o => `
+        <tr>
+            <td>${o.id}</td>
+            <td><strong>${escapeHtml(o.username)}</strong></td>
+            <td>${escapeHtml(o.full_name)}</td>
+            <td><span class="badge badge-primary">${escapeHtml(o.designation || 'Procurement Officer')}</span></td>
+            <td><strong>${escapeHtml(o.center_name || 'Unassigned')}</strong><br><small style="color: var(--text-muted);">${o.center_code || ''}</small></td>
+            <td>${escapeHtml(o.district || '-')}</td>
+            <td>${escapeHtml(o.phone)}<br><small style="color: var(--text-muted);">${escapeHtml(o.email || '')}</small></td>
+            <td><span class="badge ${o.is_active ? 'badge-live' : 'badge-danger'}">${o.is_active ? 'Active' : 'Suspended'}</span></td>
+            <td>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openAdminEditOfficialModal(${o.id})">✏️ Edit</button>
+                    <button class="btn btn-danger" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="deleteAdminOfficial(${o.id}, '${escapeHtml(o.username)}')">🗑️ Delete</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openAdminCreateOfficialModal() {
+    const modal = document.getElementById("admin-create-official-modal");
+    if (modal) {
+        document.getElementById("admin-create-official-form").reset();
+        modal.style.display = "flex";
+    }
+}
+
+function closeAdminCreateOfficialModal() {
+    const modal = document.getElementById("admin-create-official-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function handleAdminCreateOfficial(e) {
+    e.preventDefault();
+    const username = document.getElementById("admin-official-create-username").value.trim();
+    const password = document.getElementById("admin-official-create-password").value;
+    const fullName = document.getElementById("admin-official-create-fullname").value.trim();
+    const phone = document.getElementById("admin-official-create-phone").value.trim();
+    const email = document.getElementById("admin-official-create-email").value.trim();
+    const centerId = document.getElementById("admin-official-create-center").value;
+    const designation = document.getElementById("admin-official-create-designation").value.trim();
+
+    try {
+        await App.fetch("/api/admin/officials", {
+            method: "POST",
+            body: JSON.stringify({
+                username,
+                password,
+                full_name: fullName,
+                phone,
+                email: email || null,
+                center_id: parseInt(centerId),
+                designation: designation || "Procurement Officer"
+            })
+        });
+
+        App.showToast(`Central Office user "${username}" created successfully!`, "success");
+        closeAdminCreateOfficialModal();
+        await loadAdminOfficials();
+        await loadUsers();
+    } catch (err) {
+        App.showToast(`Failed to create official: ${err.message}`, "alert");
+    }
+}
+
+function openAdminEditOfficialModal(officialId) {
+    const official = adminOfficials.find(o => o.id === officialId);
+    if (!official) return;
+
+    document.getElementById("admin-official-edit-id").value = official.id;
+    document.getElementById("admin-official-edit-username-disp").textContent = official.username;
+    document.getElementById("admin-official-edit-fullname").value = official.full_name;
+    document.getElementById("admin-official-edit-phone").value = official.phone;
+    document.getElementById("admin-official-edit-email").value = official.email || "";
+    document.getElementById("admin-official-edit-center").value = official.center_id;
+    document.getElementById("admin-official-edit-designation").value = official.designation || "";
+    document.getElementById("admin-official-edit-active").value = official.is_active ? "true" : "false";
+
+    document.getElementById("admin-edit-official-modal").style.display = "flex";
+}
+
+function closeAdminEditOfficialModal() {
+    const modal = document.getElementById("admin-edit-official-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function handleAdminUpdateOfficial(e) {
+    e.preventDefault();
+    const officialId = document.getElementById("admin-official-edit-id").value;
+    const fullName = document.getElementById("admin-official-edit-fullname").value.trim();
+    const phone = document.getElementById("admin-official-edit-phone").value.trim();
+    const email = document.getElementById("admin-official-edit-email").value.trim();
+    const centerId = document.getElementById("admin-official-edit-center").value;
+    const designation = document.getElementById("admin-official-edit-designation").value.trim();
+    const isActive = document.getElementById("admin-official-edit-active").value === "true";
+
+    try {
+        await App.fetch(`/api/admin/officials/${officialId}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                full_name: fullName,
+                phone,
+                email: email || null,
+                center_id: parseInt(centerId),
+                designation: designation || null,
+                is_active: isActive
+            })
+        });
+
+        App.showToast("Central Office user updated successfully!", "success");
+        closeAdminEditOfficialModal();
+        await loadAdminOfficials();
+        await loadUsers();
+    } catch (err) {
+        App.showToast(`Failed to update official: ${err.message}`, "alert");
+    }
+}
+
+async function deleteAdminOfficial(officialId, username) {
+    if (!confirm(`Are you sure you want to delete Central Office user "${username}"? This cannot be undone.`)) return;
+
+    try {
+        const res = await App.fetch(`/api/admin/officials/${officialId}`, {
+            method: "DELETE"
+        });
+        App.showToast(res.message || "Central Office user deleted successfully.", "success");
+        await loadAdminOfficials();
+        await loadUsers();
+    } catch (err) {
+        App.showToast(`Failed to delete official: ${err.message}`, "alert");
+    }
+}
+
+// 10. Farmer Approval Queue & Registry
+async function loadAdminFarmers() {
+    const statusFilter = document.getElementById("admin-farmer-approval-filter") ? document.getElementById("admin-farmer-approval-filter").value : "ALL";
+    const tbody = document.getElementById("admin-farmers-body");
+    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px;">Loading farmer registry...</td></tr>`;
+
+    try {
+        const url = `/api/admin/farmers${statusFilter && statusFilter !== 'ALL' ? `?status=${statusFilter}` : ''}`;
+        const farmers = await App.fetch(url);
+        adminFarmers = farmers;
+
+        // Count pending farmers
+        const pendingCount = farmers.filter(f => f.approval_status === "PENDING").length;
+        const badge = document.getElementById("admin-pending-farmers-badge");
+        if (badge) {
+            badge.textContent = `${pendingCount} Pending`;
+            badge.className = pendingCount > 0 ? "badge badge-warning pulse" : "badge badge-live";
+        }
+
+        renderAdminFarmersTable(farmers);
+    } catch (e) {
+        console.error("Failed to load farmers:", e);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger-color); padding: 20px;">Failed to load farmers: ${e.message}</td></tr>`;
+    }
+}
+
+function renderAdminFarmersTable(farmers) {
+    const tbody = document.getElementById("admin-farmers-body");
+    if (!tbody) return;
+
+    if (!farmers || farmers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">No farmers found matching the filter criteria.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = farmers.map(f => {
+        let statusBadge = "badge-live";
+        if (f.approval_status === "PENDING") statusBadge = "badge-warning";
+        else if (f.approval_status === "REJECTED") statusBadge = "badge-danger";
+
+        return `
+            <tr>
+                <td><strong style="color: var(--primary-color);">${escapeHtml(f.farmer_code)}</strong></td>
+                <td><strong>${escapeHtml(f.full_name)}</strong><br><small style="color: var(--text-muted);">Crop: ${escapeHtml(f.primary_crop || '-')}</small></td>
+                <td>📞 ${escapeHtml(f.phone)}<br><small style="color: var(--text-muted);">Aadhaar: ${escapeHtml(f.aadhaar_number || '-')}</small></td>
+                <td>${escapeHtml(f.village)}, ${escapeHtml(f.district)}<br><small style="color: var(--text-muted);">${escapeHtml(f.mandal || '')}</small></td>
+                <td><strong>${f.land_area_acres}</strong> Acres<br><small style="color: var(--text-muted);">PB: ${escapeHtml(f.passbook_number || '-')}</small></td>
+                <td>${escapeHtml(f.center_name || 'Not assigned')}<br><small style="color: var(--text-muted);">${f.center_code || ''}</small></td>
+                <td>
+                    <span class="badge ${statusBadge}">${f.approval_status}</span>
+                    ${f.approval_status === 'REJECTED' && f.approval_remarks ? `
+                        <div style="font-size: 0.75rem; color: #dc2626; margin-top: 4px; max-width: 140px; word-break: break-word;">
+                            ${escapeHtml(f.approval_remarks)}
+                        </div>
+                    ` : ''}
+                    ${f.approval_status === 'APPROVED' && f.approved_at ? `
+                        <div style="font-size: 0.72rem; color: #16a34a; margin-top: 2px;">
+                            ${new Date(f.approved_at).toLocaleDateString()}
+                        </div>
+                    ` : ''}
+                </td>
+                <td>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        ${f.approval_status === 'PENDING' ? `
+                            <button class="btn btn-success" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="approveFarmer(${f.id}, '${escapeHtml(f.full_name)}')">
+                                ✅ Approve
+                            </button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openAdminRejectFarmerModal(${f.id}, '${escapeHtml(f.full_name)}', '${f.farmer_code}')">
+                                ❌ Reject
+                            </button>
+                        ` : ''}
+                        ${f.approval_status === 'REJECTED' ? `
+                            <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="approveFarmer(${f.id}, '${escapeHtml(f.full_name)}')">
+                                Re-Approve
+                            </button>
+                        ` : ''}
+                        ${f.approval_status === 'APPROVED' ? `
+                            <span style="font-size: 0.8rem; color: #16a34a; font-weight: 600;">Allowed to Book</span>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterAdminFarmersTable() {
+    const q = (document.getElementById("admin-farmer-search").value || "").toLowerCase();
+    const filtered = adminFarmers.filter(f =>
+        f.full_name.toLowerCase().includes(q) ||
+        f.farmer_code.toLowerCase().includes(q) ||
+        (f.phone && f.phone.includes(q)) ||
+        (f.village && f.village.toLowerCase().includes(q)) ||
+        (f.district && f.district.toLowerCase().includes(q))
+    );
+    renderAdminFarmersTable(filtered);
+}
+
+async function approveFarmer(farmerId, farmerName) {
+    if (!confirm(`Approve registration for farmer "${farmerName}"? This will immediately allow them to book procurement tokens.`)) return;
+
+    try {
+        const res = await App.fetch(`/api/admin/farmers/${farmerId}/approve`, {
+            method: "PUT"
+        });
+        App.showToast(res.message || `Farmer ${farmerName} approved successfully!`, "success");
+        await loadAdminFarmers();
+    } catch (err) {
+        App.showToast(`Approval failed: ${err.message}`, "alert");
+    }
+}
+
+function openAdminRejectFarmerModal(farmerId, farmerName, farmerCode) {
+    document.getElementById("admin-reject-farmer-id").value = farmerId;
+    document.getElementById("admin-reject-farmer-name").textContent = farmerName;
+    document.getElementById("admin-reject-farmer-code").textContent = farmerCode;
+    document.getElementById("admin-reject-remarks").value = "";
+    document.getElementById("admin-reject-farmer-modal").style.display = "flex";
+}
+
+function closeAdminRejectFarmerModal() {
+    const modal = document.getElementById("admin-reject-farmer-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function handleAdminRejectFarmer(e) {
+    e.preventDefault();
+    const farmerId = document.getElementById("admin-reject-farmer-id").value;
+    const remarks = document.getElementById("admin-reject-remarks").value.trim();
+
+    if (!remarks) {
+        App.showToast("Please provide a reason for rejection.", "alert");
+        return;
+    }
+
+    try {
+        const res = await App.fetch(`/api/admin/farmers/${farmerId}/reject`, {
+            method: "PUT",
+            body: JSON.stringify({ remarks })
+        });
+        App.showToast(res.message || "Farmer registration rejected and alert notification dispatched.", "info");
+        closeAdminRejectFarmerModal();
+        await loadAdminFarmers();
+    } catch (err) {
+        App.showToast(`Rejection failed: ${err.message}`, "alert");
     }
 }
 
@@ -459,5 +780,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadCentersTable();
     await loadAdminCommodities();
     await loadAdminSchedules();
+    await loadAdminOfficials();
+    await loadAdminFarmers();
     await loadUsers();
 });
+

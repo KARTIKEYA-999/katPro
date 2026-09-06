@@ -5,15 +5,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from backend.app.database import get_db
 from backend.app.models import (
-    User, Official, ProcurementCenter, Commodity, ProcurementSchedule,
+    User, Farmer, Official, ProcurementCenter, Commodity, ProcurementSchedule,
     TimeSlot, Booking, Token, QueueEntry, ProcurementTransaction, Announcement, Notification
 )
 from backend.app.schemas import (
     CallNextRequest, CompleteTransactionRequest, SkipTokenRequest,
     CenterStatusUpdate, AnnouncementCreate, ScheduleCreate, ScheduleUpdate,
-    ScheduleOut, TimeSlotOut, CommodityOut
+    ScheduleOut, TimeSlotOut, CommodityOut,
+    FarmerCreateByOfficial, FarmerUpdateByOfficial, FarmerDetailOut
 )
-from backend.app.auth import require_official
+from backend.app.auth import require_official, get_password_hash
 from backend.app.c_bridge import compute_queue_metrics_fast
 from backend.app.websocket_manager import manager
 
@@ -424,4 +425,267 @@ def delete_schedule_forbidden(schedule_id: int):
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Access denied. Deleting or canceling procurement schedules is restricted to State Administrators only."
     )
+
+# --- CENTRAL OFFICE: FARMER MANAGEMENT & REGISTRATION REGISTRY ---
+
+@router.get("/farmers", response_model=List[FarmerDetailOut])
+def get_official_farmers(
+    approval_status: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: User = Depends(require_official),
+    db: Session = Depends(get_db)
+):
+    """Central Office: Lists farmers in registry with optional search and status filter"""
+    query = db.query(Farmer).join(User)
+    if approval_status and approval_status.upper() != "ALL":
+        query = query.filter(Farmer.approval_status == approval_status.upper())
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            (User.full_name.ilike(term)) |
+            (Farmer.farmer_code.ilike(term)) |
+            (User.phone.ilike(term)) |
+            (Farmer.village.ilike(term))
+        )
+
+    farmers = query.order_by(Farmer.created_at.desc()).all()
+    return [
+        FarmerDetailOut(
+            id=f.id,
+            user_id=f.user_id,
+            username=f.user.username,
+            farmer_code=f.farmer_code,
+            full_name=f.user.full_name,
+            phone=f.user.phone,
+            email=f.user.email,
+            village=f.village,
+            mandal=f.mandal,
+            district=f.district,
+            state=f.state,
+            land_size_acres=float(f.land_size_acres),
+            primary_crop=f.primary_crop,
+            bank_account_last4=f.bank_account_last4,
+            profile_image_url=f.profile_image_url,
+            approval_status=f.approval_status,
+            approval_remarks=f.approval_remarks,
+            approved_at=f.approved_at,
+            created_at=f.created_at,
+            is_active=f.user.is_active
+        )
+        for f in farmers
+    ]
+
+@router.post("/farmers", response_model=FarmerDetailOut, status_code=status.HTTP_201_CREATED)
+def create_official_farmer(
+    req: FarmerCreateByOfficial,
+    current_user: User = Depends(require_official),
+    db: Session = Depends(get_db)
+):
+    """Central Office: Enrolls a new farmer into the system (submitted for State Admin approval)"""
+    if db.query(User).filter(User.username == req.username).first():
+        raise HTTPException(status_code=400, detail="Username already registered")
+    if db.query(User).filter(User.phone == req.phone).first():
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+
+    new_user = User(
+        username=req.username,
+        password_hash=get_password_hash(req.password),
+        role="FARMER",
+        full_name=req.full_name,
+        phone=req.phone,
+        email=req.email,
+        language_pref="te",
+        is_active=True
+    )
+    db.add(new_user)
+    db.flush()
+
+    land_acres = req.land_area_acres if req.land_area_acres is not None else (req.land_size_acres or 3.0)
+    bank_last4 = req.bank_account_last4
+    if not bank_last4 and req.bank_account_number:
+        bank_last4 = req.bank_account_number[-4:]
+
+    farmer_code = f"FAR-TS-{new_user.id:03d}"
+    farmer = Farmer(
+        user_id=new_user.id,
+        farmer_code=farmer_code,
+        village=req.village,
+        mandal=req.mandal or "Chivvemla",
+        district=req.district,
+        state=req.state,
+        land_size_acres=land_acres,
+        primary_crop=req.primary_crop,
+        bank_account_last4=bank_last4 or "1234",
+        approval_status="PENDING"
+    )
+    db.add(farmer)
+    db.commit()
+    db.refresh(farmer)
+
+    return FarmerDetailOut(
+        id=farmer.id,
+        user_id=new_user.id,
+        username=new_user.username,
+        farmer_code=farmer.farmer_code,
+        full_name=new_user.full_name,
+        phone=new_user.phone,
+        email=new_user.email,
+        village=farmer.village,
+        mandal=farmer.mandal,
+        district=farmer.district,
+        state=farmer.state,
+        land_size_acres=float(farmer.land_size_acres),
+        land_area_acres=float(farmer.land_size_acres),
+        aadhaar_number=req.aadhaar_number,
+        passbook_number=req.passbook_number,
+        primary_crop=farmer.primary_crop,
+        bank_account_last4=farmer.bank_account_last4,
+        profile_image_url=farmer.profile_image_url,
+        approval_status=farmer.approval_status,
+        approval_remarks=farmer.approval_remarks,
+        approved_at=farmer.approved_at,
+        created_at=farmer.created_at,
+        is_active=new_user.is_active
+    )
+
+@router.put("/farmers/{farmer_id}", response_model=FarmerDetailOut)
+def update_official_farmer(
+    farmer_id: int,
+    req: FarmerUpdateByOfficial,
+    current_user: User = Depends(require_official),
+    db: Session = Depends(get_db)
+):
+    """Central Office: Updates a farmer's demographic or land record"""
+    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+    user = farmer.user
+
+    if req.full_name is not None:
+        user.full_name = req.full_name
+    if req.phone is not None:
+        user.phone = req.phone
+    if req.email is not None:
+        user.email = req.email
+    if req.is_active is not None:
+        user.is_active = req.is_active
+    if req.password and req.password.strip():
+        user.password_hash = get_password_hash(req.password.strip())
+
+    if req.village is not None:
+        farmer.village = req.village
+    if req.mandal is not None:
+        farmer.mandal = req.mandal
+    if req.district is not None:
+        farmer.district = req.district
+    if req.state is not None:
+        farmer.state = req.state
+    if req.land_area_acres is not None:
+        farmer.land_size_acres = req.land_area_acres
+    elif req.land_size_acres is not None:
+        farmer.land_size_acres = req.land_size_acres
+    if req.primary_crop is not None:
+        farmer.primary_crop = req.primary_crop
+    if req.bank_account_last4 is not None:
+        farmer.bank_account_last4 = req.bank_account_last4
+    elif req.bank_account_number:
+        farmer.bank_account_last4 = req.bank_account_number[-4:]
+
+    db.commit()
+    db.refresh(farmer)
+
+    return FarmerDetailOut(
+        id=farmer.id,
+        user_id=user.id,
+        username=user.username,
+        farmer_code=farmer.farmer_code,
+        full_name=user.full_name,
+        phone=user.phone,
+        email=user.email,
+        village=farmer.village,
+        mandal=farmer.mandal,
+        district=farmer.district,
+        state=farmer.state,
+        land_size_acres=float(farmer.land_size_acres),
+        land_area_acres=float(farmer.land_size_acres),
+        passbook_number=req.passbook_number,
+        primary_crop=farmer.primary_crop,
+        bank_account_last4=farmer.bank_account_last4,
+        profile_image_url=farmer.profile_image_url,
+        approval_status=farmer.approval_status,
+        approval_remarks=farmer.approval_remarks,
+        approved_at=farmer.approved_at,
+        created_at=farmer.created_at,
+        is_active=user.is_active
+    )
+
+@router.delete("/farmers/{farmer_id}")
+def delete_official_farmer(
+    farmer_id: int,
+    current_user: User = Depends(require_official),
+    db: Session = Depends(get_db)
+):
+    """Central Office: Deletes a farmer record from the registry"""
+    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+    user = farmer.user
+    code = farmer.farmer_code
+    db.delete(farmer)
+    db.delete(user)
+    db.commit()
+    return {"message": f"Farmer {code} removed from registry successfully", "success": True}
+
+@router.get("/farmers/{farmer_id}/form-data")
+def get_farmer_registration_form_data(
+    farmer_id: int,
+    current_user: User = Depends(require_official),
+    db: Session = Depends(get_db)
+):
+    """Central Office: Fetches complete verifiable certificate data for printing the registration form"""
+    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+    user = farmer.user
+    official = db.query(Official).filter(Official.user_id == current_user.id).first()
+    center = official.center if official else None
+
+    center_name = center.name if center else "State Central Procurement Center"
+    center_code = center.center_code if center else "CPC-01"
+
+    return {
+        "portal_name": "National Digital Agricultural Procurement System",
+        "ministry": "Ministry of Consumer Affairs, Food & Public Distribution • Govt of India",
+        "ps_id": "SIH 2026 PS ID: 26032",
+        "certificate_id": f"CERT-{farmer.farmer_code}-{farmer.id:04d}",
+        "farmer_code": farmer.farmer_code,
+        "full_name": user.full_name,
+        "username": user.username,
+        "phone": user.phone,
+        "email": user.email or "Not Provided",
+        "aadhaar_last4": user.phone[-4:],
+        "village": farmer.village,
+        "mandal": farmer.mandal or "N/A",
+        "district": farmer.district,
+        "state": farmer.state,
+        "land_size_acres": float(farmer.land_size_acres),
+        "land_area_acres": float(farmer.land_size_acres),
+        "passbook_number": f"TS-PB-{farmer.farmer_code}",
+        "primary_crop": farmer.primary_crop,
+        "bank_account_masked": f"XXXX-XXXX-{farmer.bank_account_last4 or '1234'}",
+        "bank_account_number": farmer.bank_account_last4,
+        "bank_ifsc_code": "SBIN0004567",
+        "bank_name": "State Bank of India",
+        "profile_image_url": farmer.profile_image_url,
+        "approval_status": farmer.approval_status,
+        "approval_remarks": farmer.approval_remarks,
+        "approved_at": farmer.approved_at.strftime("%d-%b-%Y %H:%M") if farmer.approved_at else "Pending Administrator Verification",
+        "registration_date": farmer.created_at.strftime("%d-%b-%Y"),
+        "center_name": center_name,
+        "center_code": center_code,
+        "issuing_center": center_name,
+        "issuing_officer": current_user.full_name,
+        "officer_designation": official.designation if official else "Procurement Officer",
+        "generated_at": datetime.utcnow().strftime("%d-%b-%Y %H:%M:%S UTC")
+    }
 
