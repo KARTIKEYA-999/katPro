@@ -686,3 +686,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadOfficialFarmers();
 });
 
+// Explicit global exposure on window for inline HTML onclick handlers
+window.switchOfficialTab = switchOfficialTab;
+window.loadDashboard = loadDashboard;
+window.loadQueueRoster = loadQueueRoster;
+window.loadOfficialFarmers = loadOfficialFarmers;
+window.filterQueueTable = filterQueueTable;
+window.filterOfficialFarmersTable = filterOfficialFarmersTable;
+window.callNextFarmer = callNextFarmer;
+window.openWeighModal = openWeighModal;
+window.closeWeighModal = closeWeighModal;
+window.togglePauseQueue = togglePauseQueue;
+window.openAnnouncementModal = openAnnouncementModal;
+window.closeAnnouncementModal = closeAnnouncementModal;
+window.openOfficialCreateFarmerModal = openOfficialCreateFarmerModal;
+window.closeOfficialCreateFarmerModal = closeOfficialCreateFarmerModal;
+window.handleOfficialCreateFarmer = handleOfficialCreateFarmer;
+window.openOfficialEditFarmerModal = openOfficialEditFarmerModal;
+window.closeOfficialEditFarmerModal = closeOfficialEditFarmerModal;
+window.handleOfficialUpdateFarmer = handleOfficialUpdateFarmer;
+window.deleteOfficialFarmer = deleteOfficialFarmer;
+window.openFarmerRegistrationFormModal = openFarmerRegistrationFormModal;
+window.closeFarmerRegistrationFormModal = closeFarmerRegistrationFormModal;
+window.openQuickDownloadCertModal = openQuickDownloadCertModal;
+window.closeQuickDownloadCertModal = closeQuickDownloadCertModal;
+window.onQuickCertFarmerSelect = onQuickCertFarmerSelect;
+window.handleQuickCertSubmit = handleQuickCertSubmit;
+window.openBlankRegistrationForm = openBlankRegistrationForm;
+window.printFarmerForm = printFarmerForm;
+

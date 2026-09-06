@@ -849,3 +849,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadUsers();
 });
 
+// Explicit global exposure on window for inline HTML onclick handlers
+window.switchAdminTab = switchAdminTab;
+window.loadAdminKPIs = loadAdminKPIs;
+window.loadAnalytics = loadAnalytics;
+window.loadCentersTable = loadCentersTable;
+window.loadAdminCommodities = loadAdminCommodities;
+window.loadAdminSchedules = loadAdminSchedules;
+window.loadAdminOfficials = loadAdminOfficials;
+window.loadAdminFarmers = loadAdminFarmers;
+window.loadUsers = loadUsers;
+window.runCppOptimization = runCppOptimization;
+window.runCppSimulation = runCppSimulation;
+window.openAdminCreateScheduleModal = openAdminCreateScheduleModal;
+window.closeAdminCreateScheduleModal = closeAdminCreateScheduleModal;
+window.openAdminEditScheduleModal = openAdminEditScheduleModal;
+window.closeAdminEditScheduleModal = closeAdminEditScheduleModal;
+window.openAdminCreateOfficialModal = openAdminCreateOfficialModal;
+window.closeAdminCreateOfficialModal = closeAdminCreateOfficialModal;
+window.handleAdminCreateOfficial = handleAdminCreateOfficial;
+window.openAdminEditOfficialModal = openAdminEditOfficialModal;
+window.closeAdminEditOfficialModal = closeAdminEditOfficialModal;
+window.handleAdminUpdateOfficial = handleAdminUpdateOfficial;
+window.deleteAdminOfficial = deleteAdminOfficial;
+window.approveFarmer = approveFarmer;
+window.openAdminRejectFarmerModal = openAdminRejectFarmerModal;
+window.closeAdminRejectFarmerModal = closeAdminRejectFarmerModal;
+window.handleAdminRejectFarmer = handleAdminRejectFarmer;
+window.filterAdminFarmers = filterAdminFarmers;
+window.toggleUserStatus = toggleUserStatus;
+
