@@ -294,12 +294,12 @@ function renderAdminSchedulesTable(schedules) {
                 <td><span class="badge" style="background: var(--bg-card); border: 1px solid var(--border-color);">${s.slots ? s.slots.length : 0} Slots</span></td>
                 <td><span class="badge ${statusBadge}">${s.status}</span></td>
                 <td>
-                    <div style="display: flex; gap: 6px;">
-                        <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openAdminEditScheduleModal(${s.id})">
-                            ✏️ Edit
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn btn-outline btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="openAdminEditScheduleModal(${s.id})" title="Edit Schedule Quota & Timing" aria-label="Edit Schedule">
+                            ✏️
                         </button>
-                        <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem; color: var(--danger-color); border-color: var(--danger-color);" onclick="deleteOrCancelAdminSchedule(${s.id})">
-                            🗑️ Delete
+                        <button class="btn btn-outline btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px; color: var(--danger-color); border-color: var(--danger-color);" onclick="deleteOrCancelAdminSchedule(${s.id})" title="Cancel or Delete Schedule" aria-label="Delete Schedule">
+                            🗑️
                         </button>
                     </div>
                 </td>
@@ -467,10 +467,26 @@ async function loadUsers() {
     }
 }
 
+async function toggleUserStatus(userId, newStatus) {
+    try {
+        const res = await App.fetch(`/api/admin/users/${userId}/status?is_active=${newStatus}`, {
+            method: "PUT"
+        });
+        App.showToast(res.message || "User status updated", "success");
+        await loadUsers();
+    } catch (e) {
+        App.showToast(`Failed to update status: ${e.message}`, "alert");
+    }
+}
+
 // 9. Central Office Users Management
 async function loadAdminOfficials() {
     const tbody = document.getElementById("admin-officials-body");
-    if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading Central Office users...</td></tr>`;
+    if (!adminOfficials || adminOfficials.length === 0) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading Central Office users...</td></tr>`;
+    } else {
+        renderAdminOfficialsTable(adminOfficials);
+    }
 
     try {
         const officials = await App.fetch("/api/admin/officials");
@@ -479,10 +495,15 @@ async function loadAdminOfficials() {
         const badge = document.getElementById("tab-badge-officials");
         if (badge) badge.textContent = officials.length;
 
+        const quickBadge = document.getElementById("admin-quick-officials-badge");
+        if (quickBadge) quickBadge.textContent = `${officials.length} Active`;
+
         renderAdminOfficialsTable(officials);
     } catch (e) {
         console.error("Failed to load officials:", e);
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--danger-color); padding: 20px;">Failed to load Central Office users: ${e.message}</td></tr>`;
+        if (tbody && (!adminOfficials || adminOfficials.length === 0)) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--danger-color); padding: 20px;">Failed to load Central Office users: ${e.message}</td></tr>`;
+        }
     }
 }
 
@@ -506,9 +527,13 @@ function renderAdminOfficialsTable(officials) {
             <td>${escapeHtml(o.phone)}<br><small style="color: var(--text-muted);">${escapeHtml(o.email || '')}</small></td>
             <td><span class="badge ${o.is_active ? 'badge-live' : 'badge-danger'}">${o.is_active ? 'Active' : 'Suspended'}</span></td>
             <td>
-                <div style="display: flex; gap: 6px;">
-                    <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openAdminEditOfficialModal(${o.id})">✏️ Edit</button>
-                    <button class="btn btn-danger" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="deleteAdminOfficial(${o.id}, '${escapeHtml(o.username)}')">🗑️ Delete</button>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <button class="btn btn-outline btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="openAdminEditOfficialModal(${o.id})" title="Edit Central Office User" aria-label="Edit User">
+                        ✏️
+                    </button>
+                    <button class="btn btn-danger btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="deleteAdminOfficial(${o.id}, '${escapeHtml(o.username)}')" title="Delete Central Office User" aria-label="Delete User">
+                        🗑️
+                    </button>
                 </div>
             </td>
         </tr>
@@ -529,6 +554,12 @@ function switchAdminTab(tabName) {
             else pane.classList.remove("active");
         }
     });
+
+    try {
+        const url = new URL(window.location);
+        url.searchParams.set("tab", tabName);
+        window.history.replaceState(null, null, url.toString());
+    } catch (e) {}
 
     if (tabName === "officials") {
         loadAdminOfficials();
@@ -681,7 +712,11 @@ async function deleteAdminOfficial(officialId, username) {
 async function loadAdminFarmers() {
     const statusFilter = document.getElementById("admin-farmer-approval-filter") ? document.getElementById("admin-farmer-approval-filter").value : "ALL";
     const tbody = document.getElementById("admin-farmers-body");
-    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px;">Loading farmer registry...</td></tr>`;
+    if (!adminFarmers || adminFarmers.length === 0) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px;">Loading farmer registry...</td></tr>`;
+    } else {
+        renderAdminFarmersTable(adminFarmers);
+    }
 
     try {
         const url = `/api/admin/farmers${statusFilter && statusFilter !== 'ALL' ? `?approval_status=${statusFilter}` : ''}`;
@@ -707,11 +742,18 @@ async function loadAdminFarmers() {
             tabBadge.textContent = `${pendingCount} Pending`;
             tabBadge.className = pendingCount > 0 ? "tab-badge badge-pending" : "tab-badge";
         }
+        const quickPendingBadge = document.getElementById("admin-quick-pending-badge");
+        if (quickPendingBadge) {
+            quickPendingBadge.textContent = `${pendingCount} Pending`;
+            quickPendingBadge.className = pendingCount > 0 ? "badge badge-warning pulse" : "badge badge-live";
+        }
 
         renderAdminFarmersTable(farmers);
     } catch (e) {
         console.error("Failed to load farmers:", e);
-        if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger-color); padding: 20px;">Failed to load farmers: ${e.message}</td></tr>`;
+        if (tbody && (!adminFarmers || adminFarmers.length === 0)) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger-color); padding: 20px;">Failed to load farmers: ${e.message}</td></tr>`;
+        }
     }
 }
 
@@ -751,22 +793,22 @@ function renderAdminFarmersTable(farmers) {
                     ` : ''}
                 </td>
                 <td>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 6px; align-items: center;">
                         ${f.approval_status === 'PENDING' ? `
-                            <button class="btn btn-success" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="approveFarmer(${f.id}, '${escapeHtml(f.full_name)}')">
-                                ✅ Approve
+                            <button class="btn btn-success btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="approveFarmer(${f.id}, '${escapeHtml(f.full_name)}')" title="Approve Registration (Unlocks Token Booking)" aria-label="Approve">
+                                ✅
                             </button>
-                            <button class="btn btn-danger" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openAdminRejectFarmerModal(${f.id}, '${escapeHtml(f.full_name)}', '${f.farmer_code}')">
-                                ❌ Reject
+                            <button class="btn btn-danger btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="openAdminRejectFarmerModal(${f.id}, '${escapeHtml(f.full_name)}', '${f.farmer_code}')" title="Reject Registration (Lock Booking & Send Alert)" aria-label="Reject">
+                                ❌
                             </button>
                         ` : ''}
                         ${f.approval_status === 'REJECTED' ? `
-                            <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="approveFarmer(${f.id}, '${escapeHtml(f.full_name)}')">
-                                Re-Approve
+                            <button class="btn btn-outline btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="approveFarmer(${f.id}, '${escapeHtml(f.full_name)}')" title="Re-Approve Farmer Registration" aria-label="Re-Approve">
+                                🔄
                             </button>
                         ` : ''}
                         ${f.approval_status === 'APPROVED' ? `
-                            <span style="font-size: 0.8rem; color: #16a34a; font-weight: 600;">Allowed to Book</span>
+                            <span class="badge badge-live" style="font-size: 0.8rem; font-weight: 600;">Allowed to Book</span>
                         ` : ''}
                     </div>
                 </td>
@@ -837,17 +879,32 @@ async function handleAdminRejectFarmer(e) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+async function initAdminPortal() {
     if (!App.checkAuthRedirect("ADMIN")) return;
-    await loadAdminKPIs();
-    await loadAnalytics();
-    await loadCentersTable();
-    await loadAdminCommodities();
-    await loadAdminSchedules();
-    await loadAdminOfficials();
-    await loadAdminFarmers();
-    await loadUsers();
-});
+    try { await loadAdminKPIs(); } catch (e) { console.error("KPIs load error:", e); }
+    try { await loadAnalytics(); } catch (e) { console.error("Analytics load error:", e); }
+    try { await loadCentersTable(); } catch (e) { console.error("Centers load error:", e); }
+    try { await loadAdminCommodities(); } catch (e) { console.error("Commodities load error:", e); }
+    try { await loadAdminSchedules(); } catch (e) { console.error("Schedules load error:", e); }
+    try { await loadAdminOfficials(); } catch (e) { console.error("Officials load error:", e); }
+    try { await loadAdminFarmers(); } catch (e) { console.error("Farmers load error:", e); }
+    try { await loadUsers(); } catch (e) { console.error("Users load error:", e); }
+
+    // Auto-select tab if specified via URL parameter or hash
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get("tab") || (window.location.hash ? window.location.hash.replace("#", "") : "");
+        if (tabParam && ["analytics", "officials", "approvals", "users"].includes(tabParam)) {
+            switchAdminTab(tabParam);
+        }
+    } catch (e) {}
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAdminPortal);
+} else {
+    initAdminPortal();
+}
 
 // Explicit global exposure on window for inline HTML onclick handlers
 window.switchAdminTab = switchAdminTab;
@@ -876,6 +933,7 @@ window.approveFarmer = approveFarmer;
 window.openAdminRejectFarmerModal = openAdminRejectFarmerModal;
 window.closeAdminRejectFarmerModal = closeAdminRejectFarmerModal;
 window.handleAdminRejectFarmer = handleAdminRejectFarmer;
-window.filterAdminFarmers = filterAdminFarmers;
+window.filterAdminFarmersTable = filterAdminFarmersTable;
+window.filterAdminFarmers = filterAdminFarmersTable;
 window.toggleUserStatus = toggleUserStatus;
 

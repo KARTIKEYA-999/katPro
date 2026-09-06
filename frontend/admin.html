@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>State Administrator Console | Procurement Management System</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.2.1">
     <script>
         (function() {
             const token = localStorage.getItem("sih_procurement_token") || localStorage.getItem("sih_token");
@@ -72,32 +72,65 @@
 
         <!-- TAB 1: ANALYTICS & INFRASTRUCTURE -->
         <div id="tab-pane-analytics" class="portal-tab-content active">
+            <!-- QUICK ADMIN ACTION CARDS -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <div class="card" style="margin-bottom: 0; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; border-left: 6px solid var(--primary-color); cursor: pointer; box-shadow: 0 4px 12px rgba(15, 81, 50, 0.08);" onclick="switchAdminTab('approvals')">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                            <span>🌾 Farmer Approval Queue</span>
+                            <span id="admin-quick-pending-badge" class="badge badge-warning pulse">0 Pending</span>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Review land/Aadhaar and approve registrations to allow token booking</p>
+                    </div>
+                    <button class="btn btn-primary btn-sm" style="white-space: nowrap; padding: 8px 14px; font-size: 0.88rem; font-weight: 600; margin-left: 12px;" onclick="event.stopPropagation(); switchAdminTab('approvals')">
+                        Review & Approve ➡️
+                    </button>
+                </div>
+                <div class="card" style="margin-bottom: 0; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; border-left: 6px solid var(--accent-gold); cursor: pointer; box-shadow: 0 4px 12px rgba(180, 83, 9, 0.08);" onclick="switchAdminTab('officials')">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                            <span>🏛️ Central Office Users (CRUD)</span>
+                            <span id="admin-quick-officials-badge" class="badge badge-primary">0 Active</span>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Create, edit, assign, or delete procurement center officials</p>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-left: 12px;" onclick="event.stopPropagation()">
+                        <button class="btn btn-primary btn-sm" style="white-space: nowrap; padding: 8px 12px; font-size: 0.85rem; font-weight: 600;" onclick="openAdminCreateOfficialModal()">
+                            ➕ Add
+                        </button>
+                        <button class="btn btn-outline btn-sm" style="white-space: nowrap; padding: 8px 12px; font-size: 0.85rem; font-weight: 600;" onclick="switchAdminTab('officials')">
+                            Manage ➡️
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- 1. STATE-LEVEL KEY PERFORMANCE INDICATORS (KPIs) -->
             <div class="token-stats-grid" style="margin-bottom: 24px;">
-                <div class="stat-box" style="border-top: 4px solid var(--primary-color);">
+                <div class="stat-box" style="border-top: 4px solid var(--primary-color); cursor: pointer;" onclick="switchAdminTab('approvals')" title="Click to view Farmer Approval Queue">
                     <div class="stat-label" data-i18n="kpi_farmers">TOTAL REGISTERED FARMERS</div>
                     <div class="stat-value highlight" id="admin-stat-farmers">0</div>
-                    <small style="color: var(--text-muted);">Aadhaar Verified</small>
+                    <small style="color: var(--text-muted);">Aadhaar Verified • Click to Manage</small>
                 </div>
 
-                <div class="stat-box" style="border-top: 4px solid var(--accent-gold);">
+                <div class="stat-box" style="border-top: 4px solid var(--accent-gold); cursor: pointer;" onclick="switchAdminTab('officials')" title="Click to view Central Office Users">
                     <div class="stat-label" data-i18n="kpi_centers">PROCUREMENT CENTERS</div>
                     <div class="stat-value" id="admin-stat-centers">0</div>
-                <small style="color: var(--text-muted);">Across 4 Districts</small>
-            </div>
+                    <small style="color: var(--text-muted);">Across 4 Districts • Click to Manage</small>
+                </div>
 
-            <div class="stat-box" style="border-top: 4px solid #16a34a;">
-                <div class="stat-label" data-i18n="kpi_procured">TOTAL PROCURED (MT)</div>
-                <div class="stat-value" id="admin-stat-procured">0</div>
-                <small style="color: var(--text-muted);">Net Weight Recorded</small>
-            </div>
+                <div class="stat-box" style="border-top: 4px solid #16a34a;">
+                    <div class="stat-label" data-i18n="kpi_procured">TOTAL PROCURED (MT)</div>
+                    <div class="stat-value" id="admin-stat-procured">0</div>
+                    <small style="color: var(--text-muted);">Net Weight Recorded</small>
+                </div>
 
-            <div class="stat-box" style="border-top: 4px solid #3b82f6;">
-                <div class="stat-label" data-i18n="kpi_disbursed">TOTAL DBT DISBURSED</div>
-                <div class="stat-value" id="admin-stat-payout" style="font-size: 1.8rem;">₹0</div>
-                <small style="color: var(--text-muted);">Direct Benefit Transfer</small>
+                <div class="stat-box" style="border-top: 4px solid #3b82f6;">
+                    <div class="stat-label" data-i18n="kpi_disbursed">TOTAL DBT DISBURSED</div>
+                    <div class="stat-value" id="admin-stat-payout" style="font-size: 1.8rem;">₹0</div>
+                    <small style="color: var(--text-muted);">Direct Benefit Transfer</small>
+                </div>
             </div>
-        </div>
 
         <!-- 2. SIH TECHNOLOGY SHOWCASE: C++ OPTIMIZATION & WORKLOAD MODEL -->
         <div class="card" style="border-top: 4px solid #8b5cf6; background: linear-gradient(135deg, #ffffff 0%, #faf5ff 100%);">
@@ -625,8 +658,8 @@
         <p>Smart India Hackathon 2026 • Problem Statement PS ID: 26032 • Digital Procurement Platform</p>
     </footer>
 
-    <script src="/static/js/i18n.js?v=2.2.0"></script>
-    <script src="/static/js/app.js?v=2.2.0"></script>
-    <script src="/static/js/admin.js?v=2.2.0"></script>
+    <script src="/static/js/i18n.js?v=2.2.1"></script>
+    <script src="/static/js/app.js?v=2.2.1"></script>
+    <script src="/static/js/admin.js?v=2.2.1"></script>
 </body>
 </html>
