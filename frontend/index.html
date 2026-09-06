@@ -41,32 +41,10 @@
                 <div>
                     <h3 style="color: #991b1b; margin-bottom: 4px; font-size: 1.1rem;">Access Restricted: Authentication Mandatory</h3>
                     <p id="auth-required-message" style="color: #7f1d1d; font-size: 0.92rem; margin-bottom: 8px;">
-                        Login is strictly mandatory to access this module. Please sign in with your credentials or use Quick Demo Access below.
+                        Login is strictly mandatory to access this module. Please sign in with your credentials below.
                     </p>
                     <span class="badge badge-danger" style="font-weight: 600;">Security Gate Active</span>
                 </div>
-            </div>
-        </div>
-
-        <!-- Hero SIH Demonstration Access -->
-        <div class="card" style="border-top: 4px solid var(--accent-gold); background: linear-gradient(to right, #ffffff, #fefce8);">
-            <div class="card-header">
-                <h2>⚡ <span data-i18n="demo_logins">Quick SIH Demo Access</span></h2>
-                <span class="badge badge-live">Ready for Presentation</span>
-            </div>
-            <p style="margin-bottom: 16px; color: var(--text-muted); font-size: 0.95rem;">
-                Click any button below to instantly sign in and explore the full live workflow for PS ID: 26032:
-            </p>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                <button class="btn btn-accent" onclick="demoLogin('farmer')" id="demo-farmer-btn">
-                    <span data-i18n="demo_farmer_btn">👨‍🌾 Demo Farmer (Token A023 in Queue)</span>
-                </button>
-                <button class="btn btn-primary" onclick="demoLogin('official')" id="demo-official-btn">
-                    <span data-i18n="demo_official_btn">🏢 Demo Official (Suryapet CPC Control Room)</span>
-                </button>
-                <button class="btn btn-outline" onclick="demoLogin('admin')" id="demo-admin-btn">
-                    <span data-i18n="demo_admin_btn">🏛️ Demo State Administrator</span>
-                </button>
             </div>
         </div>
 
@@ -139,12 +117,16 @@
                         ← <span data-i18n="back_to_login">Back to Sign In</span>
                     </button>
                 </div>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
-                    Are you a farmer without an account? Register your farm details to start booking procurement slots and generating digital tokens.
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 14px;">
+                    Are you a farmer without an account? Register your official land, Aadhaar, and bank details to enroll into the system and queue for State Administrator approval.
                 </p>
                 <form id="register-form" onsubmit="handleRegister(event)">
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; font-size: 0.88rem; color: #166534;">
+                        ℹ️ Newly enrolled farmers will be registered with <strong>PENDING</strong> status and queued for State Administrator verification.
+                    </div>
+
                     <!-- Profile Photo Uploader -->
-                    <div class="avatar-upload-box">
+                    <div class="avatar-upload-box" style="margin-bottom: 14px;">
                         <div class="avatar-preview-wrap" id="reg-avatar-wrap">
                             <span class="avatar-preview-default" id="reg-avatar-default">👨‍🌾</span>
                             <img id="reg-avatar-img" class="avatar-preview-img" style="display: none;" alt="Farmer Preview">
@@ -167,32 +149,86 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Full Name</label>
-                        <input type="text" id="reg-fullname" class="form-control" placeholder="Farmer Full Name" required>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-grid-2">
                         <div class="form-group">
-                            <label>Mobile Number</label>
-                            <input type="tel" id="reg-phone" class="form-control" placeholder="+91 98765 43210" required>
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Username *</label>
+                            <input type="text" id="reg-username" class="form-control" placeholder="e.g. farmer_ramesh" required>
                         </div>
                         <div class="form-group">
-                            <label>Preferred Username</label>
-                            <input type="text" id="reg-username" class="form-control" placeholder="Username" required>
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Password *</label>
+                            <input type="password" id="reg-password" class="form-control" placeholder="Min 6 chars" minlength="6" required>
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+
+                    <div class="form-grid-2">
                         <div class="form-group">
-                            <label>Password</label>
-                            <input type="password" id="reg-password" class="form-control" placeholder="Password" required>
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Full Name *</label>
+                            <input type="text" id="reg-fullname" class="form-control" placeholder="e.g. Ramesh Reddy" required>
                         </div>
                         <div class="form-group">
-                            <label>Village / District</label>
-                            <input type="text" id="reg-village" class="form-control" placeholder="e.g. Kudakuda, Suryapet" required>
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Phone Number *</label>
+                            <input type="tel" id="reg-phone" class="form-control" placeholder="10-digit mobile" pattern="[0-9]{10}" required>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-accent" style="width: 100%; margin-top: 8px;">
-                        <span>Register & Get Digital Pass</span>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Aadhaar Number *</label>
+                            <input type="text" id="reg-aadhaar" class="form-control" placeholder="12-digit Aadhaar" pattern="[0-9]{12}" required>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Email (Optional)</label>
+                            <input type="email" id="reg-email" class="form-control" placeholder="farmer@example.com">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-3">
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Village *</label>
+                            <input type="text" id="reg-village" class="form-control" placeholder="Village" required>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Mandal *</label>
+                            <input type="text" id="reg-mandal" class="form-control" placeholder="Mandal" required>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">District *</label>
+                            <input type="text" id="reg-district" class="form-control" placeholder="District" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-3">
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Land (Acres) *</label>
+                            <input type="number" step="0.01" min="0.1" id="reg-land" class="form-control" placeholder="e.g. 5.5" required>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Passbook No *</label>
+                            <input type="text" id="reg-passbook" class="form-control" placeholder="e.g. PB-98765" required>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Primary Crop *</label>
+                            <input type="text" id="reg-crop" class="form-control" placeholder="e.g. Paddy" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-3" style="margin-bottom: 16px;">
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Account *</label>
+                            <input type="text" id="reg-bank-acc" class="form-control" placeholder="Account Number" required>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank IFSC *</label>
+                            <input type="text" id="reg-bank-ifsc" class="form-control" placeholder="e.g. SBIN0001234" required>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Name *</label>
+                            <input type="text" id="reg-bank-name" class="form-control" placeholder="e.g. State Bank of India" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-accent" style="width: 100%; margin-top: 8px;" id="reg-submit-btn">
+                        <span>➕ Register New Farmer Account</span>
                     </button>
 
                     <!-- Back to Sign In Link Below Register Button -->
@@ -449,11 +485,21 @@
         // Handle New Farmer Registration
         async function handleRegister(e) {
             e.preventDefault();
-            const fullName = document.getElementById("reg-fullname").value.trim();
-            const phone = document.getElementById("reg-phone").value.trim();
             const username = document.getElementById("reg-username").value.trim();
             const password = document.getElementById("reg-password").value;
+            const fullName = document.getElementById("reg-fullname").value.trim();
+            const phone = document.getElementById("reg-phone").value.trim();
+            const aadhaar = document.getElementById("reg-aadhaar").value.trim();
+            const email = document.getElementById("reg-email").value.trim();
             const village = document.getElementById("reg-village").value.trim();
+            const mandal = document.getElementById("reg-mandal").value.trim();
+            const district = document.getElementById("reg-district").value.trim();
+            const land = document.getElementById("reg-land").value;
+            const passbook = document.getElementById("reg-passbook").value.trim();
+            const crop = document.getElementById("reg-crop").value.trim();
+            const bankAcc = document.getElementById("reg-bank-acc").value.trim();
+            const bankIfsc = document.getElementById("reg-bank-ifsc").value.trim();
+            const bankName = document.getElementById("reg-bank-name").value.trim();
 
             try {
                 const data = await App.fetch("/api/auth/register", {
@@ -464,13 +510,25 @@
                         role: "FARMER",
                         full_name: fullName,
                         phone,
+                        email: email || null,
+                        aadhaar_number: aadhaar,
                         village,
+                        mandal,
+                        district,
+                        state: "Telangana",
+                        land_area_acres: parseFloat(land),
+                        land_size_acres: parseFloat(land),
+                        passbook_number: passbook,
+                        primary_crop: crop,
+                        bank_account_number: bankAcc,
+                        bank_ifsc_code: bankIfsc,
+                        bank_name: bankName,
                         profile_image: selectedAvatarBase64
                     })
                 });
                 App.setAuth(data.access_token, data.user);
-                App.showToast("Registration successful! Redirecting to Farmer Portal...", "success");
-                setTimeout(() => window.location.href = "/farmer", 1000);
+                App.showToast("Registration submitted successfully! Status is PENDING for State Admin verification.", "success");
+                setTimeout(() => window.location.href = "/farmer", 1200);
             } catch (err) {
                 App.showToast(err.message, "alert");
             }
@@ -488,7 +546,7 @@
                 if (isUnauthorizedRole && user) {
                     msgEl.innerHTML = `Access Denied: You are signed in as <strong>${user.full_name} (${user.role})</strong>, which does not have permission to access <strong>${mod}</strong>. Please sign in with an authorized role account below.`;
                 } else {
-                    msgEl.innerHTML = `Direct access to <strong>${mod}</strong> was blocked. <strong>Login is strictly mandatory</strong> to access this system. Please sign in or use Quick Demo Access below.`;
+                    msgEl.innerHTML = `Direct access to <strong>${mod}</strong> was blocked. <strong>Login is strictly mandatory</strong> to access this system. Please sign in with your credentials below.`;
                 }
 
                 if (banner) {

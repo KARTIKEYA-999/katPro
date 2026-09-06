@@ -18,13 +18,19 @@ class UserRegister(BaseModel):
     language_pref: str = "en"
     profile_image: Optional[str] = None
     # Farmer specific fields
+    aadhaar_number: Optional[str] = None
     village: Optional[str] = "Kudakuda"
     mandal: Optional[str] = "Chivvemla"
     district: Optional[str] = "Suryapet"
     state: Optional[str] = "Telangana"
     land_size_acres: Optional[float] = 3.0
+    land_area_acres: Optional[float] = None
+    passbook_number: Optional[str] = None
     primary_crop: Optional[str] = "Paddy / Rice (Grade-A)"
+    bank_account_number: Optional[str] = None
     bank_account_last4: Optional[str] = "1234"
+    bank_ifsc_code: Optional[str] = None
+    bank_name: Optional[str] = None
 
 class UserOut(BaseModel):
     id: int

@@ -678,7 +678,7 @@ footer a {
 
 /* --- NON-ROLE-BASED AUTH & REGISTRATION SWITCHER --- */
 .auth-flow-container {
-    max-width: 580px;
+    max-width: 680px;
     margin: 0 auto 28px;
     width: 100%;
 }
@@ -786,6 +786,27 @@ footer a {
     border-color: #94a3b8;
     color: #0f172a;
     transform: scale(1.02);
+}
+
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+    .form-grid-2,
+    .form-grid-3 {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 /* Farmer Registration Certificate & Printable Styles */

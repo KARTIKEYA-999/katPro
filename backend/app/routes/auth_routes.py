@@ -102,6 +102,8 @@ def register(req: UserRegister, db: Session = Depends(get_db)):
     # Create role-specific profile
     if user.role == "FARMER":
         farmer_code = f"FAR-TS-{user.id:03d}"
+        land_size = req.land_area_acres if req.land_area_acres is not None else (req.land_size_acres if req.land_size_acres is not None else 2.50)
+        bank_last4 = req.bank_account_number[-4:] if req.bank_account_number else (req.bank_account_last4 or "1234")
         farmer = Farmer(
             user_id=user.id,
             farmer_code=farmer_code,
@@ -109,10 +111,15 @@ def register(req: UserRegister, db: Session = Depends(get_db)):
             mandal=req.mandal or "Chivvemla",
             district=req.district or "Suryapet",
             state=req.state or "Telangana",
-            land_size_acres=req.land_size_acres or 3.0,
+            land_size_acres=land_size,
             primary_crop=req.primary_crop or "Paddy",
-            bank_account_last4=req.bank_account_last4 or "1234",
-            profile_image_url=avatar_url
+            passbook_number=req.passbook_number,
+            bank_account_number=req.bank_account_number,
+            bank_account_last4=bank_last4,
+            bank_ifsc_code=req.bank_ifsc_code,
+            bank_name=req.bank_name,
+            profile_image_url=avatar_url,
+            approval_status="PENDING"
         )
         db.add(farmer)
     elif user.role == "OFFICIAL":
