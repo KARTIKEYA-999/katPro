@@ -495,9 +495,6 @@ async function loadAdminOfficials() {
         const badge = document.getElementById("tab-badge-officials");
         if (badge) badge.textContent = officials.length;
 
-        const quickBadge = document.getElementById("admin-quick-officials-badge");
-        if (quickBadge) quickBadge.textContent = `${officials.length} Active`;
-
         renderAdminOfficialsTable(officials);
     } catch (e) {
         console.error("Failed to load officials:", e);
@@ -741,11 +738,6 @@ async function loadAdminFarmers() {
         if (tabBadge) {
             tabBadge.textContent = `${pendingCount} Pending`;
             tabBadge.className = pendingCount > 0 ? "tab-badge badge-pending" : "tab-badge";
-        }
-        const quickPendingBadge = document.getElementById("admin-quick-pending-badge");
-        if (quickPendingBadge) {
-            quickPendingBadge.textContent = `${pendingCount} Pending`;
-            quickPendingBadge.className = pendingCount > 0 ? "badge badge-warning pulse" : "badge badge-live";
         }
 
         renderAdminFarmersTable(farmers);

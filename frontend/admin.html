@@ -72,51 +72,18 @@
 
         <!-- TAB 1: ANALYTICS & INFRASTRUCTURE -->
         <div id="tab-pane-analytics" class="portal-tab-content active">
-            <!-- QUICK ADMIN ACTION CARDS -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                <div class="card" style="margin-bottom: 0; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; border-left: 6px solid var(--primary-color); cursor: pointer; box-shadow: 0 4px 12px rgba(15, 81, 50, 0.08);" onclick="switchAdminTab('approvals')">
-                    <div>
-                        <div style="font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
-                            <span>🌾 Farmer Approval Queue</span>
-                            <span id="admin-quick-pending-badge" class="badge badge-warning pulse">0 Pending</span>
-                        </div>
-                        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Review land/Aadhaar and approve registrations to allow token booking</p>
-                    </div>
-                    <button class="btn btn-primary btn-sm" style="white-space: nowrap; padding: 8px 14px; font-size: 0.88rem; font-weight: 600; margin-left: 12px;" onclick="event.stopPropagation(); switchAdminTab('approvals')">
-                        Review & Approve ➡️
-                    </button>
-                </div>
-                <div class="card" style="margin-bottom: 0; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; border-left: 6px solid var(--accent-gold); cursor: pointer; box-shadow: 0 4px 12px rgba(180, 83, 9, 0.08);" onclick="switchAdminTab('officials')">
-                    <div>
-                        <div style="font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
-                            <span>🏛️ Central Office Users (CRUD)</span>
-                            <span id="admin-quick-officials-badge" class="badge badge-primary">0 Active</span>
-                        </div>
-                        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Create, edit, assign, or delete procurement center officials</p>
-                    </div>
-                    <div style="display: flex; gap: 8px; margin-left: 12px;" onclick="event.stopPropagation()">
-                        <button class="btn btn-primary btn-sm" style="white-space: nowrap; padding: 8px 12px; font-size: 0.85rem; font-weight: 600;" onclick="openAdminCreateOfficialModal()">
-                            ➕ Add
-                        </button>
-                        <button class="btn btn-outline btn-sm" style="white-space: nowrap; padding: 8px 12px; font-size: 0.85rem; font-weight: 600;" onclick="switchAdminTab('officials')">
-                            Manage ➡️
-                        </button>
-                    </div>
-                </div>
-            </div>
-
             <!-- 1. STATE-LEVEL KEY PERFORMANCE INDICATORS (KPIs) -->
             <div class="token-stats-grid" style="margin-bottom: 24px;">
-                <div class="stat-box" style="border-top: 4px solid var(--primary-color); cursor: pointer;" onclick="switchAdminTab('approvals')" title="Click to view Farmer Approval Queue">
+                <div class="stat-box" style="border-top: 4px solid var(--primary-color);">
                     <div class="stat-label" data-i18n="kpi_farmers">TOTAL REGISTERED FARMERS</div>
                     <div class="stat-value highlight" id="admin-stat-farmers">0</div>
-                    <small style="color: var(--text-muted);">Aadhaar Verified • Click to Manage</small>
+                    <small style="color: var(--text-muted);">Aadhaar Verified</small>
                 </div>
 
-                <div class="stat-box" style="border-top: 4px solid var(--accent-gold); cursor: pointer;" onclick="switchAdminTab('officials')" title="Click to view Central Office Users">
+                <div class="stat-box" style="border-top: 4px solid var(--accent-gold);">
                     <div class="stat-label" data-i18n="kpi_centers">PROCUREMENT CENTERS</div>
                     <div class="stat-value" id="admin-stat-centers">0</div>
-                    <small style="color: var(--text-muted);">Across 4 Districts • Click to Manage</small>
+                    <small style="color: var(--text-muted);">Across 4 Districts</small>
                 </div>
 
                 <div class="stat-box" style="border-top: 4px solid #16a34a;">
