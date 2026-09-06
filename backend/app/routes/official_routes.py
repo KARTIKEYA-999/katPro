@@ -463,6 +463,7 @@ def get_official_farmers(
             district=f.district,
             state=f.state,
             land_size_acres=float(f.land_size_acres),
+            land_area_acres=float(f.land_size_acres),
             primary_crop=f.primary_crop,
             bank_account_last4=f.bank_account_last4,
             profile_image_url=f.profile_image_url,

@@ -197,9 +197,15 @@ def test_farmer_approval_workflow_and_booking_gate():
     assert profile_res.json()["approval_status"] == "PENDING"
 
     # Farmer attempts to book a token -> MUST BE BLOCKED WITH 403
+    scheds_res = client.get("/api/farmer/schedules?center_id=1&commodity_id=1")
+    sched = scheds_res.json()[0]
+    avail_slot = next((s for s in sched["slots"] if not s["is_full"]), None)
+    if not avail_slot:
+        avail_slot = sched["slots"][2]
+
     book_payload = {
-        "schedule_id": 1,
-        "slot_id": 4,
+        "schedule_id": sched["id"],
+        "slot_id": avail_slot["id"],
         "commodity_id": 1,
         "estimated_quantity_quintals": 40.0
     }

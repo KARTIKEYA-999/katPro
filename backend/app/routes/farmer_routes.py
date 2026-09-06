@@ -13,7 +13,7 @@ from backend.app.schemas import (
     CenterOut, CommodityOut, ScheduleOut, TimeSlotOut, BookingCreate,
     DigitalTokenOut, FarmerActiveStatus, NotificationOut
 )
-from backend.app.auth import require_farmer
+from backend.app.auth import require_farmer, get_current_user
 from backend.app.c_bridge import compute_queue_metrics_fast, generate_token_fast
 from backend.app.websocket_manager import manager
 
@@ -50,7 +50,7 @@ def get_farmer_profile(current_user: User = Depends(require_farmer), db: Session
 @router.put("/language")
 def update_language_preference(
     lang: str,
-    current_user: User = Depends(require_farmer),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Updates preferred language (en, hi, te)"""

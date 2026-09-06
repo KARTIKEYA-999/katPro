@@ -69,6 +69,7 @@ async function loadQueueRoster() {
 
 function renderQueueTable(items) {
     const tbody = document.getElementById("queue-roster-body");
+    if (!tbody) return;
     if (!items || items.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: var(--text-muted);">No tokens scheduled today.</td></tr>`;
         return;
@@ -353,7 +354,7 @@ function renderOfficialFarmersTable(farmers) {
                 <td>${escapeHtml(f.phone)}</td>
                 <td>${escapeHtml(f.aadhaar_number || '-')}</td>
                 <td>${escapeHtml(f.village)}, ${escapeHtml(f.mandal || '')}</td>
-                <td><strong>${f.land_area_acres}</strong></td>
+                <td><strong>${f.land_area_acres != null ? f.land_area_acres : (f.land_size_acres != null ? f.land_size_acres : '-')}</strong></td>
                 <td>${escapeHtml(f.primary_crop || '-')}</td>
                 <td>
                     <span class="badge ${statusBadge}">${f.approval_status}</span>
@@ -469,7 +470,7 @@ function openOfficialEditFarmerModal(farmerId) {
     document.getElementById("official-farmer-edit-village").value = farmer.village;
     document.getElementById("official-farmer-edit-mandal").value = farmer.mandal || "";
     document.getElementById("official-farmer-edit-district").value = farmer.district;
-    document.getElementById("official-farmer-edit-land").value = farmer.land_area_acres;
+    document.getElementById("official-farmer-edit-land").value = (farmer.land_area_acres != null ? farmer.land_area_acres : (farmer.land_size_acres || 3.0));
     document.getElementById("official-farmer-edit-passbook").value = farmer.passbook_number || "";
     document.getElementById("official-farmer-edit-crop").value = farmer.primary_crop || "";
     document.getElementById("official-farmer-edit-bank-acc").value = farmer.bank_account_number || "";
