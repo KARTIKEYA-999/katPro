@@ -325,14 +325,16 @@ def delete_admin_official(
 @router.get("/farmers", response_model=List[FarmerDetailOut])
 def get_admin_farmers(
     approval_status: Optional[str] = None,
+    status: Optional[str] = None,
     search: Optional[str] = None,
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
     """Admin: Lists all registered farmers with verification and approval statuses"""
+    effective_status = approval_status or status
     query = db.query(Farmer).join(User)
-    if approval_status and approval_status.upper() != "ALL":
-        query = query.filter(Farmer.approval_status == approval_status.upper())
+    if effective_status and effective_status.upper() != "ALL":
+        query = query.filter(Farmer.approval_status == effective_status.upper())
     if search and search.strip():
         term = f"%{search.strip()}%"
         query = query.filter(

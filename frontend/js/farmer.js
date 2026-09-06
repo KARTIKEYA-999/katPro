@@ -17,7 +17,33 @@ function showTab(tabId) {
     const target = document.getElementById(tabId);
     if (target) target.style.display = "block";
 
-    if (tabId === 'booking-tab') document.getElementById('tab-btn-booking').className = "btn btn-primary";
+    if (tabId === 'booking-tab') {
+        document.getElementById('tab-btn-booking').className = "btn btn-primary";
+        const lockBanner = document.getElementById("booking-gate-lock-banner");
+        if (lockBanner) {
+            if (currentProfile && currentProfile.approval_status !== "APPROVED") {
+                lockBanner.style.display = "block";
+                const isPending = currentProfile.approval_status === "PENDING";
+                lockBanner.innerHTML = `
+                    <div style="background: ${isPending ? '#fffbeb' : '#fef2f2'}; border: 1px solid ${isPending ? '#fde68a' : '#fecaca'}; border-radius: 8px; padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
+                        <span style="font-size: 1.8rem;">${isPending ? '⏳' : '❌'}</span>
+                        <div>
+                            <strong style="color: ${isPending ? '#92400e' : '#991b1b'}; font-size: 1rem; display: block; margin-bottom: 2px;">
+                                Digital Slot Booking Locked (${currentProfile.approval_status})
+                            </strong>
+                            <span style="color: ${isPending ? '#78350f' : '#7f1d1d'}; font-size: 0.9rem;">
+                                ${isPending 
+                                    ? "Your account registration is under verification by the State Procurement Administrator. Slot booking will unlock automatically upon approval."
+                                    : `Registration rejected by Administrator: "${currentProfile.approval_remarks || 'Document mismatch'}". Please contact your Central Office.`}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                lockBanner.style.display = "none";
+            }
+        }
+    }
     else if (tabId === 'notifications-tab') document.getElementById('tab-btn-notifs').className = "btn btn-primary";
     else if (tabId === 'history-tab') document.getElementById('tab-btn-history').className = "btn btn-primary";
 }
@@ -125,9 +151,59 @@ async function loadActiveToken() {
     try {
         const res = await App.fetch("/api/farmer/active-token");
         if (!res.has_active_token || !res.token) {
+            // If farmer account is PENDING approval
+            if (currentProfile && currentProfile.approval_status === "PENDING") {
+                container.innerHTML = `
+                    <div class="card" style="text-align: center; padding: 36px 20px; background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%); border: 2px solid #fde68a;">
+                        <div style="font-size: 3.2rem; margin-bottom: 8px;">⏳</div>
+                        <span class="badge badge-warning" style="font-size: 0.85rem; padding: 4px 12px; margin-bottom: 12px; display: inline-block;">VERIFICATION IN PROGRESS</span>
+                        <h3 style="color: #92400e; font-size: 1.35rem; margin-bottom: 8px;">Farmer Account Awaiting State Admin Approval</h3>
+                        <p style="color: #78350f; max-width: 580px; margin: 0 auto 16px auto; font-size: 0.95rem; line-height: 1.5;">
+                            Farmer Code: <strong>${currentProfile.farmer_code}</strong> • Village: <strong>${currentProfile.village}</strong> • Land: <strong>${currentProfile.land_size_acres || currentProfile.land_area_acres || '-'} Acres</strong><br>
+                            Your revenue land records and passbook details are being reviewed by the State Administrator. 
+                            Digital slot booking and live token generation will unlock automatically once approved.
+                        </p>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="loadProfile(); loadActiveToken(); App.showToast('Checking status with registry...', 'info');">
+                                🔄 Check Approval Status
+                            </button>
+                            <button class="btn btn-outline" onclick="showTab('notifications-tab')">
+                                🔔 View Notices
+                            </button>
+                        </div>
+                    </div>
+                `;
+                activeTokenData = null;
+                return;
+            }
+
+            // If farmer account was REJECTED
+            if (currentProfile && currentProfile.approval_status === "REJECTED") {
+                container.innerHTML = `
+                    <div class="card" style="text-align: center; padding: 36px 20px; background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%); border: 2px solid #fecaca;">
+                        <div style="font-size: 3.2rem; margin-bottom: 8px;">❌</div>
+                        <span class="badge badge-danger" style="font-size: 0.85rem; padding: 4px 12px; margin-bottom: 12px; display: inline-block;">REGISTRATION REJECTED</span>
+                        <h3 style="color: #991b1b; font-size: 1.35rem; margin-bottom: 8px;">Registration Verification Failed</h3>
+                        <p style="color: #7f1d1d; max-width: 580px; margin: 0 auto 14px auto; font-size: 0.95rem; line-height: 1.5;">
+                            Reason provided by Administrator: <strong>"${currentProfile.approval_remarks || 'Revenue record mismatch'}"</strong>
+                        </p>
+                        <p style="color: #475569; font-size: 0.9rem; margin-bottom: 18px;">
+                            Please bring your Pattadar Passbook and Aadhaar card to your local Central Office Mandi to resolve the discrepancy.
+                        </p>
+                        <button class="btn btn-outline" onclick="showTab('notifications-tab')">
+                            🔔 View Formal Rejection Notice
+                        </button>
+                    </div>
+                `;
+                activeTokenData = null;
+                return;
+            }
+
+            // Normal state for APPROVED farmer without active token
             container.innerHTML = `
                 <div class="card" style="text-align: center; padding: 32px; background: #ffffff;">
                     <div style="font-size: 3rem; margin-bottom: 8px;">🌾</div>
+                    <span class="badge badge-live" style="margin-bottom: 8px; display: inline-block;">ACCOUNT VERIFIED</span>
                     <h3 style="color: var(--primary-dark); margin-bottom: 8px;">No Active Procurement Token</h3>
                     <p style="color: var(--text-muted); margin-bottom: 20px;">
                         You do not have an active queue booking today. Book a slot below to generate your digital token.

@@ -424,12 +424,14 @@ table tr:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 10000;
     padding: 16px;
+    animation: fadeIn 0.2s ease-in-out;
 }
 
 .modal {
@@ -889,10 +891,84 @@ footer a {
         top: 0 !important;
         width: 100% !important;
         margin: 0 !important;
-        padding: 20px !important;
+        padding: 24px !important;
         box-shadow: none !important;
-        border: 2px solid #000 !important;
+        border: 2px solid #0f5132 !important;
     }
 }
+
+/* --- PORTAL TAB NAVIGATION --- */
+.portal-tabs-bar {
+    display: flex;
+    gap: 8px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 6px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.portal-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.portal-tab-btn:hover {
+    color: var(--primary-color);
+    background: rgba(15, 81, 50, 0.06);
+}
+
+.portal-tab-btn.active {
+    color: #ffffff;
+    background: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(15, 81, 50, 0.25);
+}
+
+.portal-tab-btn .tab-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: inherit;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.portal-tab-btn:not(.active) .tab-badge {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.portal-tab-btn:not(.active) .tab-badge.badge-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.portal-tab-content {
+    display: none;
+}
+
+.portal-tab-content.active {
+    display: block;
+    animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 
 

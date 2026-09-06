@@ -475,6 +475,10 @@ async function loadAdminOfficials() {
     try {
         const officials = await App.fetch("/api/admin/officials");
         adminOfficials = officials;
+
+        const badge = document.getElementById("tab-badge-officials");
+        if (badge) badge.textContent = officials.length;
+
         renderAdminOfficialsTable(officials);
     } catch (e) {
         console.error("Failed to load officials:", e);
@@ -511,10 +515,56 @@ function renderAdminOfficialsTable(officials) {
     `).join('');
 }
 
-function openAdminCreateOfficialModal() {
+function switchAdminTab(tabName) {
+    const tabs = ["analytics", "officials", "approvals", "users"];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`btn-tab-${t}`);
+        const pane = document.getElementById(`tab-pane-${t}`);
+        if (btn) {
+            if (t === tabName) btn.classList.add("active");
+            else btn.classList.remove("active");
+        }
+        if (pane) {
+            if (t === tabName) pane.classList.add("active");
+            else pane.classList.remove("active");
+        }
+    });
+
+    if (tabName === "officials") {
+        loadAdminOfficials();
+    } else if (tabName === "approvals") {
+        loadAdminFarmers();
+    } else if (tabName === "users") {
+        loadUsers();
+    }
+}
+
+async function ensureCentersDropdownPopulated() {
+    if (!adminCenters || adminCenters.length === 0) {
+        try {
+            adminCenters = await App.fetch("/api/admin/centers");
+        } catch (e) {
+            console.error("Failed to load centers for officials dropdown:", e);
+        }
+    }
+    const createSelect = document.getElementById("admin-official-create-center");
+    if (createSelect && adminCenters && adminCenters.length > 0) {
+        createSelect.innerHTML = `<option value="">Select Procurement Center</option>` +
+            adminCenters.map(c => `<option value="${c.id}">${c.name} (${c.district})</option>`).join('');
+    }
+    const editSelect = document.getElementById("admin-official-edit-center");
+    if (editSelect && adminCenters && adminCenters.length > 0) {
+        editSelect.innerHTML = `<option value="">Select Procurement Center</option>` +
+            adminCenters.map(c => `<option value="${c.id}">${c.name} (${c.district})</option>`).join('');
+    }
+}
+
+async function openAdminCreateOfficialModal() {
     const modal = document.getElementById("admin-create-official-modal");
     if (modal) {
-        document.getElementById("admin-create-official-form").reset();
+        const form = document.getElementById("admin-create-official-form");
+        if (form) form.reset();
+        await ensureCentersDropdownPopulated();
         modal.style.display = "flex";
     }
 }
@@ -557,9 +607,11 @@ async function handleAdminCreateOfficial(e) {
     }
 }
 
-function openAdminEditOfficialModal(officialId) {
+async function openAdminEditOfficialModal(officialId) {
     const official = adminOfficials.find(o => o.id === officialId);
     if (!official) return;
+
+    await ensureCentersDropdownPopulated();
 
     document.getElementById("admin-official-edit-id").value = official.id;
     document.getElementById("admin-official-edit-username-disp").textContent = official.username;
@@ -632,16 +684,28 @@ async function loadAdminFarmers() {
     if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px;">Loading farmer registry...</td></tr>`;
 
     try {
-        const url = `/api/admin/farmers${statusFilter && statusFilter !== 'ALL' ? `?status=${statusFilter}` : ''}`;
+        const url = `/api/admin/farmers${statusFilter && statusFilter !== 'ALL' ? `?approval_status=${statusFilter}` : ''}`;
         const farmers = await App.fetch(url);
         adminFarmers = farmers;
 
-        // Count pending farmers
-        const pendingCount = farmers.filter(f => f.approval_status === "PENDING").length;
+        // Fetch pending count separately so table filtering doesn't zero-out the header badge
+        let pendingCount = farmers.filter(f => f.approval_status === "PENDING").length;
+        if (statusFilter !== "PENDING" && statusFilter !== "ALL") {
+            try {
+                const pendingList = await App.fetch("/api/admin/farmers?approval_status=PENDING");
+                pendingCount = pendingList.length;
+            } catch (e) {}
+        }
+
         const badge = document.getElementById("admin-pending-farmers-badge");
         if (badge) {
             badge.textContent = `${pendingCount} Pending`;
             badge.className = pendingCount > 0 ? "badge badge-warning pulse" : "badge badge-live";
+        }
+        const tabBadge = document.getElementById("tab-badge-approvals");
+        if (tabBadge) {
+            tabBadge.textContent = `${pendingCount} Pending`;
+            tabBadge.className = pendingCount > 0 ? "tab-badge badge-pending" : "tab-badge";
         }
 
         renderAdminFarmersTable(farmers);

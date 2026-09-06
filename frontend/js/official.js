@@ -283,6 +283,29 @@ function handleOfficialWsEvent(evt) {
     }
 }
 
+function switchOfficialTab(tabName) {
+    const tabs = ["queue", "registry"];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`btn-tab-${t}`);
+        const pane = document.getElementById(`tab-pane-${t}`);
+        if (btn) {
+            if (t === tabName) btn.classList.add("active");
+            else btn.classList.remove("active");
+        }
+        if (pane) {
+            if (t === tabName) pane.classList.add("active");
+            else pane.classList.remove("active");
+        }
+    });
+
+    if (tabName === "registry") {
+        loadOfficialFarmers();
+    } else if (tabName === "queue") {
+        loadDashboard();
+        loadQueueRoster();
+    }
+}
+
 // 11. Center Farmer Registry Management
 async function loadOfficialFarmers() {
     const tbody = document.getElementById("official-farmers-body");
@@ -291,6 +314,17 @@ async function loadOfficialFarmers() {
     try {
         const farmers = await App.fetch("/api/official/farmers");
         officialFarmers = farmers;
+
+        const badge = document.getElementById("tab-badge-farmers");
+        if (badge) badge.textContent = farmers.length;
+
+        // Populate quick certificate download selector
+        const quickSelect = document.getElementById("quick-cert-farmer-select");
+        if (quickSelect) {
+            quickSelect.innerHTML = `<option value="">-- Choose from Enrolled Farmers --</option>` +
+                farmers.map(f => `<option value="${f.id}">${f.farmer_code} - ${escapeHtml(f.full_name)} (${f.phone})</option>`).join('');
+        }
+
         renderOfficialFarmersTable(farmers);
     } catch (e) {
         console.error("Failed to load official farmers:", e);
@@ -331,8 +365,8 @@ function renderOfficialFarmersTable(farmers) {
                 </td>
                 <td>
                     <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                        <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openFarmerRegistrationFormModal(${f.id})">
-                            📄 Form
+                        <button class="btn btn-primary" style="padding: 4px 10px; min-height: 28px; font-size: 0.82rem; font-weight: 600;" onclick="openFarmerRegistrationFormModal(${f.id})">
+                            📄 Download Form
                         </button>
                         <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openOfficialEditFarmerModal(${f.id})">
                             ✏️ Edit
@@ -558,6 +592,86 @@ async function openFarmerRegistrationFormModal(farmerId) {
 function closeFarmerRegistrationFormModal() {
     const modal = document.getElementById("official-farmer-form-modal");
     if (modal) modal.style.display = "none";
+}
+
+function openQuickDownloadCertModal() {
+    const modal = document.getElementById("official-quick-cert-modal");
+    if (modal) {
+        document.getElementById("quick-cert-farmer-query").value = "";
+        modal.style.display = "flex";
+    }
+}
+
+function closeQuickDownloadCertModal() {
+    const modal = document.getElementById("official-quick-cert-modal");
+    if (modal) modal.style.display = "none";
+}
+
+function onQuickCertFarmerSelect(val) {
+    if (val) {
+        closeQuickDownloadCertModal();
+        openFarmerRegistrationFormModal(parseInt(val));
+    }
+}
+
+function handleQuickCertSubmit() {
+    const select = document.getElementById("quick-cert-farmer-select");
+    if (select && select.value) {
+        closeQuickDownloadCertModal();
+        openFarmerRegistrationFormModal(parseInt(select.value));
+        return;
+    }
+
+    const query = document.getElementById("quick-cert-farmer-query").value.trim().toLowerCase();
+    if (!query) {
+        App.showToast("Please select or enter a farmer code, name, or phone number.", "alert");
+        return;
+    }
+
+    const found = officialFarmers.find(f =>
+        f.farmer_code.toLowerCase() === query ||
+        (f.phone && f.phone.includes(query)) ||
+        f.full_name.toLowerCase().includes(query)
+    );
+
+    if (found) {
+        closeQuickDownloadCertModal();
+        openFarmerRegistrationFormModal(found.id);
+    } else {
+        App.showToast(`No enrolled farmer found matching "${query}".`, "alert");
+    }
+}
+
+function openBlankRegistrationForm() {
+    closeQuickDownloadCertModal();
+
+    document.getElementById("cert-ref-number").textContent = "SIH-REG-BLANK-FORM";
+    document.getElementById("cert-issue-date").textContent = new Date().toLocaleDateString('en-IN', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    document.getElementById("cert-farmer-name").textContent = "____________________________________";
+    document.getElementById("cert-farmer-code").textContent = "FAR-TS-_______________";
+    document.getElementById("cert-aadhaar").textContent = "[    ]  [    ]  [    ]  [    ] - [    ]  [    ]  [    ]  [    ] - [    ]  [    ]  [    ]  [    ]";
+    document.getElementById("cert-phone").textContent = "+91 __________________";
+    document.getElementById("cert-village-mandal").textContent = "____________________, Mandal: ____________________";
+    document.getElementById("cert-district-state").textContent = "District: ____________________, State: Telangana";
+    document.getElementById("cert-land-area").textContent = "________ Acres (Dry / Wet)";
+    document.getElementById("cert-passbook").textContent = "Pattadar PB No: ____________________";
+    document.getElementById("cert-crop").textContent = "Paddy / Maize / Cotton / Other: ____________";
+    document.getElementById("cert-center").textContent = (officialProfile && officialProfile.center_name) ? officialProfile.center_name : "Central Procurement Center";
+    document.getElementById("cert-bank-acc").textContent = "A/c: ____________________________________";
+    document.getElementById("cert-bank-ifsc").textContent = "IFSC: ____________________ Bank: ____________________";
+
+    const statusEl = document.getElementById("cert-approval-status");
+    const statusBanner = document.getElementById("cert-status-banner");
+    statusEl.textContent = "OFFICIAL REGISTRATION APPLICATION";
+    statusBanner.style.background = "#f8fafc";
+    statusBanner.style.borderColor = "#cbd5e1";
+    statusEl.style.color = "#334155";
+
+    document.getElementById("cert-approval-remarks").textContent = "Subject to Revenue (Pahani) and State Admin Verification";
+    document.getElementById("official-farmer-form-modal").style.display = "flex";
 }
 
 function printFarmerForm() {

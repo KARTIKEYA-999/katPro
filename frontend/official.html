@@ -48,10 +48,34 @@
     </header>
 
     <main class="app-container">
-        <!-- 1. CENTER OPERATIONAL STATUS & KPI OVERVIEW -->
-        <div class="card" style="border-top: 4px solid var(--primary-color);">
-            <div class="card-header">
-                <h2>🎛️ Center Operations & Live Status</h2>
+        <!-- OFFICIAL TOP NAVIGATION TABS -->
+        <div class="portal-tabs-bar">
+            <button class="portal-tab-btn active" id="btn-tab-queue" onclick="switchOfficialTab('queue')">
+                <span>⚡ Live Queue & Operations</span>
+            </button>
+            <button class="portal-tab-btn" id="btn-tab-registry" onclick="switchOfficialTab('registry')">
+                <span>👨‍🌾 Farmer Registry & Forms</span>
+                <span class="tab-badge" id="tab-badge-farmers">0</span>
+            </button>
+            <div style="margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-primary" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openOfficialCreateFarmerModal()">
+                    ➕ Register New Farmer
+                </button>
+                <button class="btn btn-outline" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openQuickDownloadCertModal()">
+                    📄 Download Registration Form
+                </button>
+                <button class="btn btn-outline" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openBlankRegistrationForm()">
+                    🖨️ Blank Application Form
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 1: LIVE QUEUE & WEIGHBRIDGE OPERATIONS -->
+        <div id="tab-pane-queue" class="portal-tab-content active">
+            <!-- 1. CENTER OPERATIONAL STATUS & KPI OVERVIEW -->
+            <div class="card" style="border-top: 4px solid var(--primary-color);">
+                <div class="card-header">
+                    <h2>🎛️ Center Operations & Live Status</h2>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <label style="font-weight: 600; font-size: 0.9rem;" data-i18n="center_status">Center Status:</label>
                     <select id="center-status-select" class="form-control" style="width: auto; font-weight: 700;" onchange="handleCenterStatusChange()">
@@ -153,54 +177,59 @@
                             <th data-i18n="table_actions">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="queue-roster-body">
-                        <tr><td colspan="9" style="text-align: center; padding: 20px;">Loading queue roster...</td></tr>
-                    </tbody>
-                </table>
+        </div>
+        <!-- END TAB 1: LIVE QUEUE -->
+
+        <!-- TAB 2: FARMER REGISTRY & CERTIFICATE CENTER -->
+        <div id="tab-pane-registry" class="portal-tab-content">
+            <div class="card" id="official-farmers-section" style="border-top: 4px solid var(--accent-gold);">
+                <div class="card-header">
+                    <div>
+                        <h2>👨‍🌾 <span data-i18n="farmer_registry">Farmer Registry & Certificate Management</span></h2>
+                        <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
+                            Enroll new farmers, update existing records, and download or print official Registration Forms and Certificates.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <input type="text" id="official-farmer-search" class="form-control" style="min-height: 38px; width: 220px;" placeholder="Search farmer, code, phone..." onkeyup="filterOfficialFarmersTable()">
+                        <button class="btn btn-primary" onclick="openOfficialCreateFarmerModal()">
+                            ➕ Register New Farmer
+                        </button>
+                        <button class="btn btn-outline" onclick="openQuickDownloadCertModal()">
+                            📄 Download Registration Form
+                        </button>
+                        <button class="btn btn-outline" onclick="openBlankRegistrationForm()">
+                            🖨️ Blank Form
+                        </button>
+                        <button class="btn btn-outline" onclick="loadOfficialFarmers()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="official-farmers-table">
+                        <thead>
+                            <tr>
+                                <th>Farmer Code</th>
+                                <th>Full Name</th>
+                                <th>Contact</th>
+                                <th>Aadhaar</th>
+                                <th>Location</th>
+                                <th>Land (Acres)</th>
+                                <th>Primary Crop</th>
+                                <th>Approval Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="official-farmers-body">
+                            <tr><td colspan="9" style="text-align: center; padding: 20px;">Loading center farmer registry...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-
-        <!-- 4. FARMER REGISTRY MANAGEMENT -->
-        <div class="card" id="official-farmers-section" style="border-top: 4px solid var(--accent-gold); margin-top: 24px;">
-            <div class="card-header">
-                <div>
-                    <h2>👨‍🌾 <span data-i18n="farmer_registry">Farmer Registry & Certificate Management</span></h2>
-                    <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
-                        Enroll new farmers, update existing records, and download official printed Registration Forms.
-                    </p>
-                </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                    <input type="text" id="official-farmer-search" class="form-control" style="min-height: 38px; width: 220px;" placeholder="Search farmer, code, phone..." onkeyup="filterOfficialFarmersTable()">
-                    <button class="btn btn-primary" onclick="openOfficialCreateFarmerModal()">
-                        ➕ Register New Farmer
-                    </button>
-                    <button class="btn btn-outline" onclick="loadOfficialFarmers()">
-                        🔄 Refresh
-                    </button>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table id="official-farmers-table">
-                    <thead>
-                        <tr>
-                            <th>Farmer Code</th>
-                            <th>Full Name</th>
-                            <th>Contact</th>
-                            <th>Aadhaar</th>
-                            <th>Location</th>
-                            <th>Land (Acres)</th>
-                            <th>Primary Crop</th>
-                            <th>Approval Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="official-farmers-body">
-                        <tr><td colspan="9" style="text-align: center; padding: 20px;">Loading center farmer registry...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <!-- END TAB 2: FARMER REGISTRY -->
     </main>
 
     <!-- 4. MODAL: COMPLETE WEIGHING & TRANSACTION -->
@@ -582,6 +611,43 @@
                 <button type="button" class="btn btn-primary" onclick="printFarmerForm()">
                     🖨️ Print / Download Registration Form
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: QUICK DOWNLOAD REGISTRATION FORM -->
+    <div id="official-quick-cert-modal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3>📄 Download Farmer Registration Form</h3>
+                <button class="btn-close" onclick="closeQuickDownloadCertModal()">&times;</button>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;">
+                    Select an enrolled farmer or enter their Farmer Code / Aadhaar number to view, download, and print their official Government Registration Certificate.
+                </p>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Select Enrolled Farmer</label>
+                    <select id="quick-cert-farmer-select" class="form-control" onchange="onQuickCertFarmerSelect(this.value)">
+                        <option value="">-- Choose from Enrolled Farmers --</option>
+                    </select>
+                </div>
+                <div style="text-align: center; color: var(--text-muted); font-weight: 600; margin: 10px 0; font-size: 0.85rem;">— OR —</div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Enter Farmer Code / Passbook / Mobile</label>
+                    <input type="text" id="quick-cert-farmer-query" class="form-control" placeholder="e.g. FAR-TS-001 or mobile number">
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px;">
+                <button type="button" class="btn btn-outline" onclick="openBlankRegistrationForm()">
+                    🖨️ Print Blank Form
+                </button>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-outline" onclick="closeQuickDownloadCertModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="handleQuickCertSubmit()">
+                        📄 Open Certificate
+                    </button>
+                </div>
             </div>
         </div>
     </div>

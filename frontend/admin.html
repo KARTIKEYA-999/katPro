@@ -47,17 +47,42 @@
     </header>
 
     <main class="app-container">
-        <!-- 1. STATE-LEVEL KEY PERFORMANCE INDICATORS (KPIs) -->
-        <div class="token-stats-grid" style="margin-bottom: 24px;">
-            <div class="stat-box" style="border-top: 4px solid var(--primary-color);">
-                <div class="stat-label" data-i18n="kpi_farmers">TOTAL REGISTERED FARMERS</div>
-                <div class="stat-value highlight" id="admin-stat-farmers">0</div>
-                <small style="color: var(--text-muted);">Aadhaar Verified</small>
+        <!-- ADMIN TOP NAVIGATION TABS -->
+        <div class="portal-tabs-bar">
+            <button class="portal-tab-btn active" id="btn-tab-analytics" onclick="switchAdminTab('analytics')">
+                <span>📊 Analytics & Schedules</span>
+            </button>
+            <button class="portal-tab-btn" id="btn-tab-officials" onclick="switchAdminTab('officials')">
+                <span>🏛️ Central Office Users</span>
+                <span class="tab-badge" id="tab-badge-officials">0</span>
+            </button>
+            <button class="portal-tab-btn" id="btn-tab-approvals" onclick="switchAdminTab('approvals')">
+                <span>🌾 Farmer Approval Queue</span>
+                <span class="tab-badge badge-pending" id="tab-badge-approvals">0 Pending</span>
+            </button>
+            <button class="portal-tab-btn" id="btn-tab-users" onclick="switchAdminTab('users')">
+                <span>👥 All System Users</span>
+            </button>
+            <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-primary" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openAdminCreateOfficialModal()">
+                    ➕ Add Central Office User
+                </button>
             </div>
+        </div>
 
-            <div class="stat-box" style="border-top: 4px solid var(--accent-gold);">
-                <div class="stat-label" data-i18n="kpi_centers">PROCUREMENT CENTERS</div>
-                <div class="stat-value" id="admin-stat-centers">0</div>
+        <!-- TAB 1: ANALYTICS & INFRASTRUCTURE -->
+        <div id="tab-pane-analytics" class="portal-tab-content active">
+            <!-- 1. STATE-LEVEL KEY PERFORMANCE INDICATORS (KPIs) -->
+            <div class="token-stats-grid" style="margin-bottom: 24px;">
+                <div class="stat-box" style="border-top: 4px solid var(--primary-color);">
+                    <div class="stat-label" data-i18n="kpi_farmers">TOTAL REGISTERED FARMERS</div>
+                    <div class="stat-value highlight" id="admin-stat-farmers">0</div>
+                    <small style="color: var(--text-muted);">Aadhaar Verified</small>
+                </div>
+
+                <div class="stat-box" style="border-top: 4px solid var(--accent-gold);">
+                    <div class="stat-label" data-i18n="kpi_centers">PROCUREMENT CENTERS</div>
+                    <div class="stat-value" id="admin-stat-centers">0</div>
                 <small style="color: var(--text-muted);">Across 4 Districts</small>
             </div>
 
@@ -222,124 +247,134 @@
                 </table>
             </div>
         </div>
+        <!-- END TAB 1: ANALYTICS & INFRASTRUCTURE -->
 
-        <!-- 6. CENTRAL OFFICE USERS MANAGEMENT -->
-        <div class="card" id="admin-officials-section" style="border-top: 4px solid var(--accent-gold);">
-            <div class="card-header">
-                <div>
-                    <h2>🏛️ <span data-i18n="co_management">Central Office Users Management</span></h2>
-                    <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">Create, configure, and manage Central Office officials assigned to procurement centers.</p>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-primary" onclick="openAdminCreateOfficialModal()">
-                        ➕ Add Central Office User
-                    </button>
-                    <button class="btn btn-outline" onclick="loadAdminOfficials()">
-                        🔄 Refresh
-                    </button>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table id="admin-officials-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Username</th>
-                            <th>Full Name</th>
-                            <th>Designation</th>
-                            <th>Assigned Center</th>
-                            <th>District</th>
-                            <th>Contact</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-officials-body">
-                        <tr><td colspan="9" style="text-align: center; padding: 20px;">Loading Central Office users...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- 7. FARMER REGISTRATION APPROVAL QUEUE -->
-        <div class="card" id="admin-farmers-section" style="border-top: 4px solid var(--primary-color);">
-            <div class="card-header">
-                <div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <h2>🌾 <span data-i18n="farmer_approval_title">Farmer Approval & Registry Queue</span></h2>
-                        <span id="admin-pending-farmers-badge" class="badge badge-warning">0 Pending</span>
+        <!-- TAB 2: CENTRAL OFFICE USERS MANAGEMENT -->
+        <div id="tab-pane-officials" class="portal-tab-content">
+            <div class="card" id="admin-officials-section" style="border-top: 4px solid var(--accent-gold);">
+                <div class="card-header">
+                    <div>
+                        <h2>🏛️ <span data-i18n="co_management">Central Office Users Management</span></h2>
+                        <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">Create, configure, and manage Central Office officials assigned to procurement centers.</p>
                     </div>
-                    <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
-                        Review farmer land/Aadhaar details and approve registrations to unlock digital token booking.
-                    </p>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="openAdminCreateOfficialModal()">
+                            ➕ Add Central Office User
+                        </button>
+                        <button class="btn btn-outline" onclick="loadAdminOfficials()">
+                            🔄 Refresh
+                        </button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                    <input type="text" id="admin-farmer-search" class="form-control" style="min-height: 38px; width: 220px;" placeholder="Search farmer, code, phone..." onkeyup="filterAdminFarmersTable()">
-                    <select id="admin-farmer-approval-filter" class="form-control" style="width: auto; min-height: 38px;" onchange="loadAdminFarmers()">
-                        <option value="ALL">All Statuses</option>
-                        <option value="PENDING" selected>⏳ Pending Approval</option>
-                        <option value="APPROVED">✅ Approved</option>
-                        <option value="REJECTED">❌ Rejected</option>
-                    </select>
-                    <button class="btn btn-outline" onclick="loadAdminFarmers()">🔄 Refresh</button>
-                </div>
-            </div>
 
-            <div class="table-wrapper">
-                <table id="admin-farmers-table">
-                    <thead>
-                        <tr>
-                            <th>Farmer Code</th>
-                            <th>Farmer Name</th>
-                            <th>Contact & Aadhaar</th>
-                            <th>Location</th>
-                            <th>Land (Acres)</th>
-                            <th>Registered Center</th>
-                            <th>Approval Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-farmers-body">
-                        <tr><td colspan="8" style="text-align: center; padding: 20px;">Loading farmer registry...</td></tr>
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table id="admin-officials-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Designation</th>
+                                <th>Assigned Center</th>
+                                <th>District</th>
+                                <th>Contact</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-officials-body">
+                            <tr><td colspan="9" style="text-align: center; padding: 20px;">Loading Central Office users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
+        <!-- END TAB 2: CENTRAL OFFICE USERS -->
 
-        <!-- 8. USER MANAGEMENT -->
-        <div class="card">
-            <div class="card-header">
-                <h2>👥 <span data-i18n="user_management">System Users Management</span></h2>
-                <div style="display: flex; gap: 8px;">
-                    <select id="user-role-filter" class="form-control" style="width: auto; min-height: 38px;" onchange="loadUsers()">
-                        <option value="">All Roles</option>
-                        <option value="FARMER">Farmers</option>
-                        <option value="OFFICIAL">Officials</option>
-                        <option value="ADMIN">Administrators</option>
-                    </select>
+        <!-- TAB 3: FARMER REGISTRATION APPROVAL QUEUE -->
+        <div id="tab-pane-approvals" class="portal-tab-content">
+            <div class="card" id="admin-farmers-section" style="border-top: 4px solid var(--primary-color);">
+                <div class="card-header">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <h2>🌾 <span data-i18n="farmer_approval_title">Farmer Approval & Registry Queue</span></h2>
+                            <span id="admin-pending-farmers-badge" class="badge badge-warning">0 Pending</span>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
+                            Review farmer land/Aadhaar details and approve registrations to unlock digital token booking.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <input type="text" id="admin-farmer-search" class="form-control" style="min-height: 38px; width: 220px;" placeholder="Search farmer, code, phone..." onkeyup="filterAdminFarmersTable()">
+                        <select id="admin-farmer-approval-filter" class="form-control" style="width: auto; min-height: 38px;" onchange="loadAdminFarmers()">
+                            <option value="ALL">All Statuses</option>
+                            <option value="PENDING" selected>⏳ Pending Approval</option>
+                            <option value="APPROVED">✅ Approved</option>
+                            <option value="REJECTED">❌ Rejected</option>
+                        </select>
+                        <button class="btn btn-outline" onclick="loadAdminFarmers()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="admin-farmers-table">
+                        <thead>
+                            <tr>
+                                <th>Farmer Code</th>
+                                <th>Farmer Name</th>
+                                <th>Contact & Aadhaar</th>
+                                <th>Location</th>
+                                <th>Land (Acres)</th>
+                                <th>Registered Center</th>
+                                <th>Approval Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-farmers-body">
+                            <tr><td colspan="8" style="text-align: center; padding: 20px;">Loading farmer registry...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Username</th>
-                            <th>Full Name</th>
-                            <th>Role</th>
-                            <th>Phone</th>
-                            <th>Language</th>
-                            <th>Status</th>
-                            <th>Toggle</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-users-body">
-                        <tr><td colspan="8" style="text-align: center; padding: 20px;">Loading users...</td></tr>
-                    </tbody>
-                </table>
+        </div>
+        <!-- END TAB 3: FARMER APPROVAL QUEUE -->
+
+        <!-- TAB 4: SYSTEM USERS MANAGEMENT -->
+        <div id="tab-pane-users" class="portal-tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>👥 <span data-i18n="user_management">System Users Management</span></h2>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="user-role-filter" class="form-control" style="width: auto; min-height: 38px;" onchange="loadUsers()">
+                            <option value="">All Roles</option>
+                            <option value="FARMER">Farmers</option>
+                            <option value="OFFICIAL">Officials</option>
+                            <option value="ADMIN">Administrators</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Role</th>
+                                <th>Phone</th>
+                                <th>Language</th>
+                                <th>Status</th>
+                                <th>Toggle</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-body">
+                            <tr><td colspan="8" style="text-align: center; padding: 20px;">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
+        <!-- END TAB 4: SYSTEM USERS -->
     </main>
 
     <!-- MODAL: ADMIN CREATE SCHEDULE -->
