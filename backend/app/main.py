@@ -1,6 +1,7 @@
 import os
 import logging
 from pathlib import Path
+from typing import Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -57,20 +58,34 @@ app.include_router(public_routes.router)
 @app.websocket("/ws/live")
 async def websocket_live_queue(
     websocket: WebSocket,
-    center_id: int = Query(default=1),
-    user_id: int = Query(default=None)
+    center_id: Optional[str] = Query(default=None),
+    user_id: Optional[str] = Query(default=None)
 ):
     """
     Bi-directional WebSocket for real-time live queue tracking:
     Transmits instant token advancements, delay alerts, and turn arrivals without page reloads.
     """
-    await manager.connect(websocket, user_id=user_id, center_id=center_id)
+    cid = 1
+    if center_id is not None and str(center_id).strip():
+        try:
+            cid = int(center_id)
+        except (ValueError, TypeError):
+            cid = 1
+
+    uid = None
+    if user_id is not None and str(user_id).strip():
+        try:
+            uid = int(user_id)
+        except (ValueError, TypeError):
+            uid = None
+
+    await manager.connect(websocket, user_id=uid, center_id=cid)
     try:
         # Send initial connection confirmation
         await websocket.send_json({
             "event": "CONNECTED",
-            "center_id": center_id,
-            "message": f"Connected to live queue updates for Center {center_id}"
+            "center_id": cid,
+            "message": f"Connected to live queue updates for Center {cid}"
         })
         while True:
             data = await websocket.receive_text()
@@ -78,10 +93,10 @@ async def websocket_live_queue(
             if data == "ping":
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
-        manager.disconnect(websocket, user_id=user_id, center_id=center_id)
+        manager.disconnect(websocket, user_id=uid, center_id=cid)
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
-        manager.disconnect(websocket, user_id=user_id, center_id=center_id)
+        manager.disconnect(websocket, user_id=uid, center_id=cid)
 
 # Serve Static Frontend Assets
 FRONTEND_DIR = BASE_DIR / "frontend"

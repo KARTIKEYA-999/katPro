@@ -145,7 +145,17 @@ const App = {
     // Real-Time WebSocket Client with Reconnect
     initWebSocket(centerId, userId, onEventCallback) {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/ws/live?center_id=${centerId || 1}&user_id=${userId || ''}`;
+        const params = new URLSearchParams();
+        const cid = centerId ? parseInt(centerId, 10) : 1;
+        params.append("center_id", isNaN(cid) ? 1 : cid);
+        if (userId !== null && userId !== undefined && String(userId).trim() !== "") {
+            const uid = parseInt(userId, 10);
+            if (!isNaN(uid)) {
+                params.append("user_id", uid);
+            }
+        }
+        const query = params.toString();
+        const wsUrl = `${protocol}//${window.location.host}/ws/live${query ? '?' + query : ''}`;
 
         let ws = null;
         let reconnectTimer = null;
