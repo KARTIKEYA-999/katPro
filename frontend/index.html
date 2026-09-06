@@ -70,12 +70,13 @@
             </div>
         </div>
 
-        <!-- Login / Register Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
-            <!-- Login Form -->
-            <div class="card">
+        <!-- Unified Authentication & Farmer Registration Container -->
+        <div class="auth-flow-container">
+            <!-- 1. Unified Non-Role-Based Sign In Card (Active by Default) -->
+            <div class="card auth-flow-card" id="auth-card-login">
                 <div class="card-header">
                     <h2>🔐 <span data-i18n="login_title">Sign In to Your Account</span></h2>
+                    <span class="badge badge-live">Unified Access</span>
                 </div>
 
                 <!-- Clear Inline Error Message Box -->
@@ -86,23 +87,8 @@
 
                 <form id="login-form" onsubmit="handleLogin(event)">
                     <div class="form-group">
-                        <label data-i18n="select_role">Select Your Role</label>
-                        <select id="login-role" class="form-control" onchange="onRoleChanged()">
-                            <option value="FARMER" data-i18n="role_farmer">Farmer</option>
-                            <option value="OFFICIAL" data-i18n="role_official">Center Official</option>
-                            <option value="ADMIN" data-i18n="role_admin">Administrator</option>
-                        </select>
-                        <div style="margin-top: 6px; font-size: 0.82rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
-                            <span id="role-hint">👨‍🌾 Farmer profile (Demo: <code>farmer1</code>)</span>
-                            <button type="button" class="btn btn-outline" style="padding: 2px 8px; min-height: 24px; font-size: 0.78rem;" onclick="fillSampleCredentials()">
-                                ⚡ Fill Sample
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
                         <label data-i18n="username">Username</label>
-                        <input type="text" id="login-username" class="form-control" placeholder="e.g. farmer1" required oninput="clearLoginErrors()">
+                        <input type="text" id="login-username" class="form-control" placeholder="Enter username (e.g. farmer1, official1, admin1)" required oninput="clearLoginErrors()">
                     </div>
 
                     <div class="form-group">
@@ -110,17 +96,48 @@
                         <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required oninput="clearLoginErrors()">
                     </div>
 
-                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;" id="login-submit-btn">
+                    <!-- Convenient Quick Sample Fill Pills for Testing & Presentation -->
+                    <div class="sample-credentials-pills">
+                        <span style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);" data-i18n="fill_sample_label">Fill Sample:</span>
+                        <button type="button" class="sample-pill-btn" onclick="fillSample('farmer')" title="Autofill Ramesh Kumar Goud (Farmer)">
+                            👨‍🌾 Farmer
+                        </button>
+                        <button type="button" class="sample-pill-btn" onclick="fillSample('official')" title="Autofill Venkat Reddy (Central Office / Suryapet CPC)">
+                            🏢 Central Office
+                        </button>
+                        <button type="button" class="sample-pill-btn" onclick="fillSample('admin')" title="Autofill Dr. K. Srinivas Rao (State Administrator)">
+                            🏛️ Admin
+                        </button>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 12px;" id="login-submit-btn">
                         <span data-i18n="btn_login">Sign In</span>
                     </button>
+
+                    <!-- Create New Farmer Link Below Sign In -->
+                    <div class="auth-switch-prompt">
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 4px;" data-i18n="new_farmer_prompt">
+                            New to the platform?
+                        </p>
+                        <button type="button" class="btn-auth-switch" id="btn-open-register" onclick="openFarmerRegistration()">
+                            <span>🌾</span>
+                            <span data-i18n="create_farmer_link">Create New Farmer Account</span>
+                            <span>→</span>
+                        </button>
+                    </div>
                 </form>
             </div>
 
-            <!-- New Farmer Registration -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>📝 <span data-i18n="btn_register">Register as New Farmer</span></h2>
-                    <span class="badge badge-live">Direct Aadhaar Integration</span>
+            <!-- 2. Register as New Farmer Card (Opened when user clicks 'Create new Farmer') -->
+            <div class="card auth-flow-card" id="auth-card-register" style="display: none;">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <h2>📝 <span data-i18n="btn_register">Register as New Farmer</span></h2>
+                        <span class="badge badge-live">Direct Aadhaar Integration</span>
+                    </div>
+                    <button type="button" class="btn-auth-switch-back" onclick="openSignIn()" title="Return to Sign In">
+                        ← <span data-i18n="back_to_login">Back to Sign In</span>
+                    </button>
                 </div>
                 <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
                     Are you a farmer without an account? Register your farm details to start booking procurement slots and generating digital tokens.
@@ -177,6 +194,17 @@
                     <button type="submit" class="btn btn-accent" style="width: 100%; margin-top: 8px;">
                         <span>Register & Get Digital Pass</span>
                     </button>
+
+                    <!-- Back to Sign In Link Below Register Button -->
+                    <div class="auth-switch-prompt">
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 4px;" data-i18n="already_account_prompt">
+                            Already have an account?
+                        </p>
+                        <button type="button" class="btn-auth-switch" onclick="openSignIn()" style="background: #f8fafc; border-color: var(--border-color); color: var(--text-main);">
+                            <span>←</span>
+                            <span data-i18n="back_to_login">Back to Sign In</span>
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -258,21 +286,33 @@
             }
         }
 
-        function onRoleChanged() {
-            const role = document.getElementById("login-role").value;
-            const userInp = document.getElementById("login-username");
-            const hint = document.getElementById("role-hint");
+        // Switch view to Farmer Registration
+        function openFarmerRegistration() {
             clearLoginErrors();
+            const loginCard = document.getElementById("auth-card-login");
+            const regCard = document.getElementById("auth-card-register");
+            if (loginCard) loginCard.style.display = "none";
+            if (regCard) {
+                regCard.style.display = "block";
+                regCard.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            if (window.history && window.history.pushState) {
+                window.history.pushState(null, null, "#register");
+            }
+        }
 
-            if (role === "FARMER") {
-                userInp.placeholder = "e.g. farmer1";
-                if (hint) hint.innerHTML = `👨‍🌾 Farmer profile (Demo: <code>farmer1</code>)`;
-            } else if (role === "OFFICIAL") {
-                userInp.placeholder = "e.g. official1";
-                if (hint) hint.innerHTML = `🏢 Mandi Official profile (Demo: <code>official1</code>)`;
-            } else if (role === "ADMIN") {
-                userInp.placeholder = "e.g. admin1";
-                if (hint) hint.innerHTML = `🏛️ State Administrator profile (Demo: <code>admin1</code>)`;
+        // Switch view to Sign In
+        function openSignIn() {
+            clearLoginErrors();
+            const loginCard = document.getElementById("auth-card-login");
+            const regCard = document.getElementById("auth-card-register");
+            if (regCard) regCard.style.display = "none";
+            if (loginCard) {
+                loginCard.style.display = "block";
+                loginCard.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            if (window.history && window.history.pushState) {
+                window.history.pushState(null, null, window.location.pathname + window.location.search);
             }
         }
 
@@ -285,29 +325,30 @@
             if (passInp) passInp.style.borderColor = "";
         }
 
-        function fillSampleCredentials() {
+        // Quick sample credential filler
+        function fillSample(role) {
             clearLoginErrors();
-            const role = document.getElementById("login-role").value;
             const userInp = document.getElementById("login-username");
             const passInp = document.getElementById("login-password");
-            if (role === "FARMER") {
+            if (role === "farmer") {
                 userInp.value = "farmer1";
                 passInp.value = "farmer123";
-            } else if (role === "OFFICIAL") {
+                App.showToast("Sample filled: Ramesh Kumar Goud (Farmer)", "info");
+            } else if (role === "official") {
                 userInp.value = "official1";
                 passInp.value = "official123";
-            } else if (role === "ADMIN") {
+                App.showToast("Sample filled: Venkat Reddy (Central Office)", "info");
+            } else if (role === "admin") {
                 userInp.value = "admin1";
                 passInp.value = "admin123";
+                App.showToast("Sample filled: Dr. K. Srinivas Rao (Admin)", "info");
             }
-            App.showToast(`Sample credentials filled for ${role}`, "info");
         }
 
-        // Handle Regular Login
+        // Handle Unified Sign In (Automatic Role Detection & Redirection)
         async function handleLogin(e) {
             e.preventDefault();
             clearLoginErrors();
-            const role = document.getElementById("login-role").value;
             const userInp = document.getElementById("login-username");
             const passInp = document.getElementById("login-password");
             const username = userInp.value.trim();
@@ -316,27 +357,34 @@
             const errorMsg = document.getElementById("login-error-msg");
 
             try {
+                // Non-role-based authentication: Send username and password only
                 const data = await App.fetch("/api/auth/login", {
                     method: "POST",
-                    body: JSON.stringify({ username, password, role })
+                    body: JSON.stringify({ username, password })
                 });
 
-                if (data.user.role !== role) {
-                    const msg = `Role mismatch: Your account has role ${data.user.role}, but you selected ${role}.`;
-                    if (errorBox && errorMsg) {
-                        errorMsg.innerHTML = `<strong>Access Denied:</strong> ${msg}`;
-                        errorBox.style.display = "flex";
-                    }
-                    App.showToast(msg, "alert");
-                    return;
-                }
-
                 App.setAuth(data.access_token, data.user);
-                App.showToast(`Signed in successfully as ${data.user.full_name} (${data.user.role})`, "success");
+                const role = (data.user.role || "").toUpperCase();
 
-                if (data.user.role === "FARMER") window.location.href = "/farmer";
-                else if (data.user.role === "OFFICIAL") window.location.href = "/official";
-                else if (data.user.role === "ADMIN") window.location.href = "/admin";
+                const roleTitles = {
+                    FARMER: "Farmer",
+                    OFFICIAL: "Central Office",
+                    ADMIN: "Administrator"
+                };
+                const displayRole = roleTitles[role] || role;
+
+                App.showToast(`Signed in successfully as ${data.user.full_name} (${displayRole})`, "success");
+
+                // Automatic role-based redirection to respective portal
+                if (role === "FARMER") {
+                    window.location.href = "/farmer";
+                } else if (role === "OFFICIAL") {
+                    window.location.href = "/official";
+                } else if (role === "ADMIN") {
+                    window.location.href = "/admin";
+                } else {
+                    App.showToast(`Unrecognized role '${role}'. Redirecting to home...`, "alert");
+                }
             } catch (err) {
                 if (errorBox && errorMsg) {
                     errorMsg.innerHTML = `<strong>Authentication Failed:</strong> ${err.message}`;
@@ -455,13 +503,21 @@
         document.addEventListener("DOMContentLoaded", () => {
             loadPublicCenters();
             const hasNotice = checkAuthNotice();
+
+            // Check if URL specifies direct farmer registration view
+            const params = new URLSearchParams(window.location.search);
+            if (window.location.hash === "#register" || params.get("action") === "register") {
+                openFarmerRegistration();
+            }
+
             if (!hasNotice) {
                 // Check for existing login
                 const user = App.getUser();
                 if (user) {
-                    if (user.role === "FARMER") window.location.href = "/farmer";
-                    else if (user.role === "OFFICIAL") window.location.href = "/official";
-                    else if (user.role === "ADMIN") window.location.href = "/admin";
+                    const role = (user.role || "").toUpperCase();
+                    if (role === "FARMER") window.location.href = "/farmer";
+                    else if (role === "OFFICIAL") window.location.href = "/official";
+                    else if (role === "ADMIN") window.location.href = "/admin";
                 }
             }
         });

@@ -39,6 +39,7 @@ CREATE TABLE users (
     email VARCHAR(128),
     language_pref VARCHAR(10) NOT NULL DEFAULT 'en' CHECK (language_pref IN ('en', 'hi', 'te')),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    profile_image_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -84,6 +85,7 @@ CREATE TABLE farmers (
     land_size_acres NUMERIC(6, 2) NOT NULL DEFAULT 2.50 CHECK (land_size_acres >= 0),
     primary_crop VARCHAR(64) NOT NULL DEFAULT 'Paddy',
     bank_account_last4 VARCHAR(4),
+    profile_image_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

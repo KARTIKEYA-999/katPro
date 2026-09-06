@@ -81,6 +81,41 @@ def test_login_role_synchronization_validation():
     assert "Role mismatch" in resp_mismatch.json()["detail"]
 
 
+def test_login_without_role_auto_detects():
+    """
+    Verifies that sign-in without a role parameter automatically detects the user's role:
+    - farmer1 -> FARMER
+    - official1 -> OFFICIAL (Central Office)
+    - admin1 -> ADMIN
+    """
+    # 1. Farmer login without role
+    resp_farmer = client.post("/api/auth/login", json={
+        "username": "farmer1",
+        "password": "farmer123"
+    })
+    assert resp_farmer.status_code == 200
+    assert resp_farmer.json()["user"]["role"] == "FARMER"
+    assert "access_token" in resp_farmer.json()
+
+    # 2. Central Office (Official) login without role
+    resp_official = client.post("/api/auth/login", json={
+        "username": "official1",
+        "password": "official123"
+    })
+    assert resp_official.status_code == 200
+    assert resp_official.json()["user"]["role"] == "OFFICIAL"
+    assert "access_token" in resp_official.json()
+
+    # 3. Admin login without role
+    resp_admin = client.post("/api/auth/login", json={
+        "username": "admin1",
+        "password": "admin123"
+    })
+    assert resp_admin.status_code == 200
+    assert resp_admin.json()["user"]["role"] == "ADMIN"
+    assert "access_token" in resp_admin.json()
+
+
 def test_farmer_registration_with_profile_image():
     """
     Verifies that a farmer can register with a profile photo (base64 data URI).
