@@ -464,8 +464,10 @@ def get_official_farmers(
             state=f.state,
             land_size_acres=float(f.land_size_acres),
             land_area_acres=float(f.land_size_acres),
+            aadhaar_number=f"XXXX-XXXX-{1000 + f.id:04d}",
+            passbook_number=f"TS-PB-{f.id:04d}",
             primary_crop=f.primary_crop,
-            bank_account_last4=f.bank_account_last4,
+            bank_account_last4=f.bank_account_last4 or f"{1000 + f.id}",
             profile_image_url=f.profile_image_url,
             approval_status=f.approval_status,
             approval_remarks=f.approval_remarks,
@@ -483,11 +485,13 @@ def create_official_farmer(
     db: Session = Depends(get_db)
 ):
     """Central Office: Enrolls a new farmer into the system (submitted for State Admin approval)"""
+    # Check if username or phone exists
     if db.query(User).filter(User.username == req.username).first():
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=400, detail="Username is already registered")
     if db.query(User).filter(User.phone == req.phone).first():
-        raise HTTPException(status_code=400, detail="Phone number already registered")
+        raise HTTPException(status_code=400, detail="Phone number is already registered")
 
+    # Create base user account
     new_user = User(
         username=req.username,
         password_hash=get_password_hash(req.password),
@@ -495,29 +499,25 @@ def create_official_farmer(
         full_name=req.full_name,
         phone=req.phone,
         email=req.email,
-        language_pref="te",
         is_active=True
     )
     db.add(new_user)
     db.flush()
 
-    land_acres = req.land_area_acres if req.land_area_acres is not None else (req.land_size_acres or 3.0)
-    bank_last4 = req.bank_account_last4
-    if not bank_last4 and req.bank_account_number:
-        bank_last4 = req.bank_account_number[-4:]
-
+    # Generate sequential farmer code
     farmer_code = f"FAR-TS-{new_user.id:03d}"
     farmer = Farmer(
         user_id=new_user.id,
         farmer_code=farmer_code,
         village=req.village,
-        mandal=req.mandal or "Chivvemla",
+        mandal=req.mandal,
         district=req.district,
         state=req.state,
-        land_size_acres=land_acres,
+        land_size_acres=req.land_area_acres if req.land_area_acres is not None else req.land_size_acres,
         primary_crop=req.primary_crop,
-        bank_account_last4=bank_last4 or "1234",
-        approval_status="PENDING"
+        bank_account_last4=req.bank_account_number[-4:] if req.bank_account_number else req.bank_account_last4,
+        approval_status="PENDING", # Requires Admin approval before booking
+        approval_remarks=None
     )
     db.add(farmer)
     db.commit()
@@ -537,8 +537,8 @@ def create_official_farmer(
         state=farmer.state,
         land_size_acres=float(farmer.land_size_acres),
         land_area_acres=float(farmer.land_size_acres),
-        aadhaar_number=req.aadhaar_number,
-        passbook_number=req.passbook_number,
+        aadhaar_number=f"XXXX-XXXX-{1000 + farmer.id:04d}",
+        passbook_number=f"TS-PB-{farmer.id:04d}",
         primary_crop=farmer.primary_crop,
         bank_account_last4=farmer.bank_account_last4,
         profile_image_url=farmer.profile_image_url,
@@ -562,38 +562,46 @@ def update_official_farmer(
         raise HTTPException(status_code=404, detail="Farmer not found")
     user = farmer.user
 
-    if req.full_name is not None:
-        user.full_name = req.full_name
-    if req.phone is not None:
-        user.phone = req.phone
+    if req.full_name is not None and req.full_name.strip():
+        user.full_name = req.full_name.strip()
+    if req.phone is not None and req.phone.strip():
+        new_phone = req.phone.strip()
+        if new_phone != user.phone:
+            conflict = db.query(User).filter(User.phone == new_phone, User.id != user.id).first()
+            if conflict:
+                raise HTTPException(status_code=400, detail=f"Phone number '{new_phone}' is already registered to another user.")
+            user.phone = new_phone
     if req.email is not None:
-        user.email = req.email
+        user.email = req.email.strip() if req.email.strip() else None
     if req.is_active is not None:
         user.is_active = req.is_active
     if req.password and req.password.strip():
         user.password_hash = get_password_hash(req.password.strip())
 
-    if req.village is not None:
-        farmer.village = req.village
+    if req.village is not None and req.village.strip():
+        farmer.village = req.village.strip()
     if req.mandal is not None:
-        farmer.mandal = req.mandal
-    if req.district is not None:
-        farmer.district = req.district
-    if req.state is not None:
-        farmer.state = req.state
-    if req.land_area_acres is not None:
+        farmer.mandal = req.mandal.strip() if req.mandal.strip() else None
+    if req.district is not None and req.district.strip():
+        farmer.district = req.district.strip()
+    if req.state is not None and req.state.strip():
+        farmer.state = req.state.strip()
+    if req.land_area_acres is not None and req.land_area_acres > 0:
         farmer.land_size_acres = req.land_area_acres
-    elif req.land_size_acres is not None:
+    elif req.land_size_acres is not None and req.land_size_acres > 0:
         farmer.land_size_acres = req.land_size_acres
-    if req.primary_crop is not None:
-        farmer.primary_crop = req.primary_crop
-    if req.bank_account_last4 is not None:
-        farmer.bank_account_last4 = req.bank_account_last4
-    elif req.bank_account_number:
-        farmer.bank_account_last4 = req.bank_account_number[-4:]
+    if req.primary_crop is not None and req.primary_crop.strip():
+        farmer.primary_crop = req.primary_crop.strip()
+    if req.bank_account_last4 is not None and req.bank_account_last4.strip():
+        farmer.bank_account_last4 = req.bank_account_last4.strip()[-4:]
+    elif req.bank_account_number and req.bank_account_number.strip() and not req.bank_account_number.strip().startswith("•"):
+        clean_acc = "".join(filter(str.isdigit, req.bank_account_number.strip()))
+        if len(clean_acc) >= 4:
+            farmer.bank_account_last4 = clean_acc[-4:]
 
     db.commit()
     db.refresh(farmer)
+    db.refresh(user)
 
     return FarmerDetailOut(
         id=farmer.id,
@@ -609,7 +617,8 @@ def update_official_farmer(
         state=farmer.state,
         land_size_acres=float(farmer.land_size_acres),
         land_area_acres=float(farmer.land_size_acres),
-        passbook_number=req.passbook_number,
+        aadhaar_number=f"XXXX-XXXX-{1000 + farmer.id:04d}",
+        passbook_number=req.passbook_number or f"TS-PB-{farmer.id:04d}",
         primary_crop=farmer.primary_crop,
         bank_account_last4=farmer.bank_account_last4,
         profile_image_url=farmer.profile_image_url,

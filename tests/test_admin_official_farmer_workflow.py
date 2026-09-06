@@ -196,15 +196,29 @@ def test_farmer_approval_workflow_and_booking_gate():
     assert profile_res.status_code == 200
     assert profile_res.json()["approval_status"] == "PENDING"
 
-    # Farmer attempts to book a token -> MUST BE BLOCKED WITH 403
-    scheds_res = client.get("/api/farmer/schedules?center_id=1&commodity_id=1")
+    # Create a dedicated schedule for this test to ensure slot availability
+    sched_day = (int(uid, 16) % 25) + 1
+    test_sched_date = f"2027-02-{sched_day:02d}"
+    sched_payload = {
+        "center_id": 1,
+        "commodity_id": 1,
+        "schedule_date": test_sched_date,
+        "start_time": "09:00:00",
+        "end_time": "17:00:00",
+        "total_capacity_quintals": 500.0,
+        "tokens_per_slot": 20
+    }
+    create_sched_res = client.post("/api/admin/schedules", json=sched_payload, headers=admin_headers)
+    assert create_sched_res.status_code in (200, 201)
+    sched_id = create_sched_res.json()["schedule_id"]
+
+    scheds_res = client.get(f"/api/farmer/schedules?center_id=1&commodity_id=1&target_date={test_sched_date}")
+    assert scheds_res.status_code == 200
     sched = scheds_res.json()[0]
-    avail_slot = next((s for s in sched["slots"] if not s["is_full"]), None)
-    if not avail_slot:
-        avail_slot = sched["slots"][2]
+    avail_slot = sched["slots"][0]
 
     book_payload = {
-        "schedule_id": sched["id"],
+        "schedule_id": sched_id,
         "slot_id": avail_slot["id"],
         "commodity_id": 1,
         "estimated_quantity_quintals": 40.0
@@ -236,6 +250,7 @@ def test_farmer_approval_workflow_and_booking_gate():
 
     # Clean up
     client.delete(f"/api/official/farmers/{farmer_id}", headers=official_headers)
+    client.delete(f"/api/admin/schedules/{sched['id']}", headers=admin_headers)
 
 
 def test_farmer_rejection_workflow():
@@ -320,4 +335,92 @@ def test_farmer_rejection_workflow():
     assert "REJECTED" in book_res.json()["detail"]
 
     # Clean up
+    client.delete(f"/api/official/farmers/{farmer_id}", headers=official_headers)
+
+
+def test_official_farmer_edit_and_persistence():
+    """
+    Verify Central Office Official farmer profile update & persistence:
+    1. Create a farmer via Central Office.
+    2. Central Office updates farmer's demographic, phone, land, crop, and bank details.
+    3. Verify PUT response contains updated details.
+    4. Fetch farmer from GET /api/official/farmers and verify persisted values.
+    5. Verify phone conflict check returns 400.
+    6. Clean up test farmer.
+    """
+    uid = uuid.uuid4().hex[:6]
+    official_headers = get_official_headers()
+
+    # 1. Create farmer
+    farmer_payload = {
+        "username": f"edit_farmer_{uid}",
+        "password": "Password123!",
+        "full_name": "Original Farmer Name",
+        "phone": f"981{uid[:7].zfill(7)}",
+        "email": f"edit_{uid}@kisaan.in",
+        "aadhaar_number": f"7788{uid[:8].zfill(8)}",
+        "village": "Original Village",
+        "mandal": "Original Mandal",
+        "district": "Nalgonda",
+        "pincode": "508201",
+        "land_area_acres": 3.0,
+        "passbook_number": f"PB-ORIG-{uid}",
+        "primary_crop": "Paddy",
+        "bank_account_number": "111122223333",
+        "bank_ifsc_code": "SBIN0001111",
+        "bank_name": "State Bank of India"
+    }
+    create_res = client.post("/api/official/farmers", json=farmer_payload, headers=official_headers)
+    assert create_res.status_code == 201
+    farmer_id = create_res.json()["id"]
+
+    # 2. Update farmer details
+    new_phone = f"982{uid[:7].zfill(7)}"
+    update_payload = {
+        "full_name": "Updated Farmer Name",
+        "phone": new_phone,
+        "village": "Updated Village",
+        "mandal": "Updated Mandal",
+        "district": "Suryapet",
+        "land_area_acres": 5.75,
+        "primary_crop": "Cotton",
+        "bank_account_number": "999988887777"
+    }
+    update_res = client.put(f"/api/official/farmers/{farmer_id}", json=update_payload, headers=official_headers)
+    assert update_res.status_code == 200, f"Expected 200, got: {update_res.text}"
+    updated_data = update_res.json()
+    assert updated_data["full_name"] == "Updated Farmer Name"
+    assert updated_data["phone"] == new_phone
+    assert updated_data["village"] == "Updated Village"
+    assert updated_data["mandal"] == "Updated Mandal"
+    assert updated_data["district"] == "Suryapet"
+    assert updated_data["land_size_acres"] == 5.75
+    assert updated_data["primary_crop"] == "Cotton"
+    assert updated_data["bank_account_last4"] == "7777"
+
+    # 3. Verify persistence via GET /api/official/farmers
+    list_res = client.get("/api/official/farmers", headers=official_headers)
+    assert list_res.status_code == 200
+    all_farmers = list_res.json()
+    found = next((f for f in all_farmers if f["id"] == farmer_id), None)
+    assert found is not None
+    assert found["full_name"] == "Updated Farmer Name"
+    assert found["phone"] == new_phone
+    assert found["village"] == "Updated Village"
+    assert found["mandal"] == "Updated Mandal"
+    assert found["district"] == "Suryapet"
+    assert found["land_size_acres"] == 5.75
+    assert found["primary_crop"] == "Cotton"
+    assert found["bank_account_last4"] == "7777"
+
+    # 4. Verify duplicate phone conflict returns 400
+    conflict_res = client.put(
+        f"/api/official/farmers/{farmer_id}",
+        json={"phone": "+91 98480 11001"},  # Ramesh Kumar's phone
+        headers=official_headers
+    )
+    assert conflict_res.status_code == 400
+    assert "already registered" in conflict_res.json()["detail"]
+
+    # 5. Clean up
     client.delete(f"/api/official/farmers/{farmer_id}", headers=official_headers)

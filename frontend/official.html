@@ -54,18 +54,12 @@
                 <span>⚡ Live Queue & Operations</span>
             </button>
             <button class="portal-tab-btn" id="btn-tab-registry" onclick="switchOfficialTab('registry')">
-                <span>👨‍🌾 Farmer Registry & Forms</span>
+                <span>👨‍🌾 Farmer Registry</span>
                 <span class="tab-badge" id="tab-badge-farmers">0</span>
             </button>
             <div style="margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-primary" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openOfficialCreateFarmerModal()">
                     ➕ Register New Farmer
-                </button>
-                <button class="btn btn-outline" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openQuickDownloadCertModal()">
-                    📄 Download Registration Form
-                </button>
-                <button class="btn btn-outline" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openBlankRegistrationForm()">
-                    🖨️ Blank Application Form
                 </button>
             </div>
         </div>
@@ -191,21 +185,15 @@
             <div class="card" id="official-farmers-section" style="border-top: 4px solid var(--accent-gold);">
                 <div class="card-header">
                     <div>
-                        <h2>👨‍🌾 <span data-i18n="farmer_registry">Farmer Registry & Certificate Management</span></h2>
+                        <h2>👨‍🌾 <span data-i18n="farmer_registry">Farmer Registry Management</span></h2>
                         <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
-                            Enroll new farmers, update existing records, and download or print official Registration Forms and Certificates.
+                            Enroll new farmers and update existing records in the procurement registry.
                         </p>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                         <input type="text" id="official-farmer-search" class="form-control" style="min-height: 38px; width: 220px;" placeholder="Search farmer, code, phone..." onkeyup="filterOfficialFarmersTable()">
                         <button class="btn btn-primary" onclick="openOfficialCreateFarmerModal()">
                             ➕ Register New Farmer
-                        </button>
-                        <button class="btn btn-outline" onclick="openQuickDownloadCertModal()">
-                            📄 Download Registration Form
-                        </button>
-                        <button class="btn btn-outline" onclick="openBlankRegistrationForm()">
-                            🖨️ Blank Form
                         </button>
                         <button class="btn btn-outline" onclick="loadOfficialFarmers()">
                             🔄 Refresh
@@ -437,7 +425,7 @@
                 <h3>✏️ Edit Farmer Profile</h3>
                 <button class="btn-close" onclick="closeOfficialEditFarmerModal()">&times;</button>
             </div>
-            <form id="official-edit-farmer-form" onsubmit="handleOfficialUpdateFarmer(event)">
+            <form id="official-edit-farmer-form" onsubmit="handleOfficialUpdateFarmer(event)" novalidate>
                 <input type="hidden" id="official-farmer-edit-id">
                 <div style="background: var(--bg-card); padding: 8px 12px; border-radius: var(--radius-md); margin-bottom: 12px; font-size: 0.88rem; border: 1px solid var(--border-color); display: flex; justify-content: space-between;">
                     <div>Farmer Code: <strong id="official-farmer-edit-code-disp">-</strong></div>
@@ -447,62 +435,62 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
                     <div class="form-group">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Full Name *</label>
-                        <input type="text" id="official-farmer-edit-fullname" class="form-control" required>
+                        <input type="text" id="official-farmer-edit-fullname" class="form-control" placeholder="Farmer Full Name" required>
                     </div>
                     <div class="form-group">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Phone Number *</label>
-                        <input type="tel" id="official-farmer-edit-phone" class="form-control" pattern="[0-9]{10}" required>
+                        <input type="tel" id="official-farmer-edit-phone" class="form-control" placeholder="10-digit mobile or +91..." required>
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                     <div class="form-group">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Village *</label>
-                        <input type="text" id="official-farmer-edit-village" class="form-control" required>
+                        <input type="text" id="official-farmer-edit-village" class="form-control" placeholder="Village name" required>
                     </div>
                     <div class="form-group">
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Mandal *</label>
-                        <input type="text" id="official-farmer-edit-mandal" class="form-control" required>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Mandal</label>
+                        <input type="text" id="official-farmer-edit-mandal" class="form-control" placeholder="Mandal">
                     </div>
                     <div class="form-group">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">District *</label>
-                        <input type="text" id="official-farmer-edit-district" class="form-control" required>
+                        <input type="text" id="official-farmer-edit-district" class="form-control" placeholder="District" required>
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                     <div class="form-group">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Land (Acres) *</label>
-                        <input type="number" step="0.01" min="0.1" id="official-farmer-edit-land" class="form-control" required>
+                        <input type="number" step="0.01" min="0.01" id="official-farmer-edit-land" class="form-control" placeholder="e.g. 2.50" required>
                     </div>
                     <div class="form-group">
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Passbook No *</label>
-                        <input type="text" id="official-farmer-edit-passbook" class="form-control" required>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Passbook No</label>
+                        <input type="text" id="official-farmer-edit-passbook" class="form-control" placeholder="Optional passbook #">
                     </div>
                     <div class="form-group">
                         <label style="font-weight: 600; display: block; margin-bottom: 4px;">Primary Crop *</label>
-                        <input type="text" id="official-farmer-edit-crop" class="form-control" required>
+                        <input type="text" id="official-farmer-edit-crop" class="form-control" placeholder="Paddy / Cotton" required>
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px;">
                     <div class="form-group">
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Account *</label>
-                        <input type="text" id="official-farmer-edit-bank-acc" class="form-control" required>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Account</label>
+                        <input type="text" id="official-farmer-edit-bank-acc" class="form-control" placeholder="Account # or Last 4">
                     </div>
                     <div class="form-group">
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank IFSC *</label>
-                        <input type="text" id="official-farmer-edit-bank-ifsc" class="form-control" required>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank IFSC</label>
+                        <input type="text" id="official-farmer-edit-bank-ifsc" class="form-control" placeholder="IFSC Code">
                     </div>
                     <div class="form-group">
-                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Name *</label>
-                        <input type="text" id="official-farmer-edit-bank-name" class="form-control" required>
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px;">Bank Name</label>
+                        <input type="text" id="official-farmer-edit-bank-name" class="form-control" placeholder="e.g. SBI, HDFC">
                     </div>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 8px;">
                     <button type="button" class="btn btn-outline" onclick="closeOfficialEditFarmerModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">💾 Save Profile</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-official-farmer">💾 Save Profile</button>
                 </div>
             </form>
         </div>

@@ -457,27 +457,33 @@ async function handleOfficialCreateFarmer(e) {
 
 function openOfficialEditFarmerModal(farmerId) {
     const farmer = officialFarmers.find(f => f.id === farmerId);
-    if (!farmer) return;
+    if (!farmer) {
+        App.showToast("Farmer profile not found", "warning");
+        return;
+    }
 
     document.getElementById("official-farmer-edit-id").value = farmer.id;
-    document.getElementById("official-farmer-edit-code-disp").textContent = farmer.farmer_code;
+    document.getElementById("official-farmer-edit-code-disp").textContent = farmer.farmer_code || "-";
     const statusBadge = document.getElementById("official-farmer-edit-status-badge");
-    statusBadge.textContent = farmer.approval_status;
-    statusBadge.className = farmer.approval_status === "APPROVED" ? "badge badge-live" : (farmer.approval_status === "PENDING" ? "badge badge-warning" : "badge badge-danger");
+    if (statusBadge) {
+        statusBadge.textContent = farmer.approval_status || "PENDING";
+        statusBadge.className = farmer.approval_status === "APPROVED" ? "badge badge-live" : (farmer.approval_status === "PENDING" ? "badge badge-warning" : "badge badge-danger");
+    }
 
-    document.getElementById("official-farmer-edit-fullname").value = farmer.full_name;
-    document.getElementById("official-farmer-edit-phone").value = farmer.phone;
-    document.getElementById("official-farmer-edit-village").value = farmer.village;
+    document.getElementById("official-farmer-edit-fullname").value = farmer.full_name || "";
+    document.getElementById("official-farmer-edit-phone").value = farmer.phone || "";
+    document.getElementById("official-farmer-edit-village").value = farmer.village || "";
     document.getElementById("official-farmer-edit-mandal").value = farmer.mandal || "";
-    document.getElementById("official-farmer-edit-district").value = farmer.district;
-    document.getElementById("official-farmer-edit-land").value = (farmer.land_area_acres != null ? farmer.land_area_acres : (farmer.land_size_acres || 3.0));
+    document.getElementById("official-farmer-edit-district").value = farmer.district || "";
+    document.getElementById("official-farmer-edit-land").value = (farmer.land_area_acres != null ? farmer.land_area_acres : (farmer.land_size_acres != null ? farmer.land_size_acres : 2.5));
     document.getElementById("official-farmer-edit-passbook").value = farmer.passbook_number || "";
-    document.getElementById("official-farmer-edit-crop").value = farmer.primary_crop || "";
-    document.getElementById("official-farmer-edit-bank-acc").value = farmer.bank_account_number || "";
+    document.getElementById("official-farmer-edit-crop").value = farmer.primary_crop || "Paddy";
+    document.getElementById("official-farmer-edit-bank-acc").value = farmer.bank_account_number || (farmer.bank_account_last4 ? `•••• ${farmer.bank_account_last4}` : "");
     document.getElementById("official-farmer-edit-bank-ifsc").value = farmer.bank_ifsc_code || "";
     document.getElementById("official-farmer-edit-bank-name").value = farmer.bank_name || "";
 
-    document.getElementById("official-edit-farmer-modal").style.display = "flex";
+    const modal = document.getElementById("official-edit-farmer-modal");
+    if (modal) modal.style.display = "flex";
 }
 
 function closeOfficialEditFarmerModal() {
@@ -486,43 +492,85 @@ function closeOfficialEditFarmerModal() {
 }
 
 async function handleOfficialUpdateFarmer(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const farmerId = document.getElementById("official-farmer-edit-id").value;
+    if (!farmerId) {
+        App.showToast("Invalid farmer ID", "alert");
+        return;
+    }
+
     const fullName = document.getElementById("official-farmer-edit-fullname").value.trim();
     const phone = document.getElementById("official-farmer-edit-phone").value.trim();
     const village = document.getElementById("official-farmer-edit-village").value.trim();
     const mandal = document.getElementById("official-farmer-edit-mandal").value.trim();
     const district = document.getElementById("official-farmer-edit-district").value.trim();
-    const land = document.getElementById("official-farmer-edit-land").value;
+    const landStr = document.getElementById("official-farmer-edit-land").value;
     const passbook = document.getElementById("official-farmer-edit-passbook").value.trim();
     const crop = document.getElementById("official-farmer-edit-crop").value.trim();
     const bankAcc = document.getElementById("official-farmer-edit-bank-acc").value.trim();
     const bankIfsc = document.getElementById("official-farmer-edit-bank-ifsc").value.trim();
     const bankName = document.getElementById("official-farmer-edit-bank-name").value.trim();
 
+    if (!fullName) {
+        App.showToast("Please enter farmer full name", "warning");
+        return;
+    }
+    if (!phone) {
+        App.showToast("Please enter farmer contact number", "warning");
+        return;
+    }
+    if (!village || !district) {
+        App.showToast("Please provide village and district", "warning");
+        return;
+    }
+    const landArea = parseFloat(landStr);
+    if (isNaN(landArea) || landArea <= 0) {
+        App.showToast("Please enter a valid land area in acres", "warning");
+        return;
+    }
+
+    const payload = {
+        full_name: fullName,
+        phone: phone,
+        village: village,
+        mandal: mandal,
+        district: district,
+        land_area_acres: landArea,
+        land_size_acres: landArea,
+        primary_crop: crop || "Paddy"
+    };
+
+    if (passbook) payload.passbook_number = passbook;
+    if (bankAcc && !bankAcc.startsWith("•")) {
+        payload.bank_account_number = bankAcc;
+    }
+    if (bankIfsc) payload.bank_ifsc_code = bankIfsc;
+    if (bankName) payload.bank_name = bankName;
+
+    const saveBtn = document.getElementById("btn-save-official-farmer");
+    const origText = saveBtn ? saveBtn.innerHTML : "💾 Save Profile";
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = "⏳ Saving...";
+    }
+
     try {
         await App.fetch(`/api/official/farmers/${farmerId}`, {
             method: "PUT",
-            body: JSON.stringify({
-                full_name: fullName,
-                phone,
-                village,
-                mandal,
-                district,
-                land_area_acres: parseFloat(land),
-                passbook_number: passbook,
-                primary_crop: crop,
-                bank_account_number: bankAcc,
-                bank_ifsc_code: bankIfsc,
-                bank_name: bankName
-            })
+            body: JSON.stringify(payload)
         });
 
-        App.showToast("Farmer profile updated successfully!", "success");
+        App.showToast(`Farmer "${fullName}" updated successfully!`, "success");
         closeOfficialEditFarmerModal();
         await loadOfficialFarmers();
     } catch (err) {
+        console.error("Failed to update farmer:", err);
         App.showToast(`Failed to update farmer: ${err.message}`, "alert");
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = origText;
+        }
     }
 }
 
