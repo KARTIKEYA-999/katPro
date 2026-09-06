@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.pytest_cache/
+.DS_Store
+*.so
+c_modules/*.so
+cpp_modules/*.so
+frontend/uploads/avatars/*
+!frontend/uploads/avatars/.gitkeep
