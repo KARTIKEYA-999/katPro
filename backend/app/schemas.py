@@ -333,7 +333,10 @@ class FarmerDetailOut(BaseModel):
     aadhaar_number: Optional[str] = None
     passbook_number: Optional[str] = None
     primary_crop: str
+    bank_account_number: Optional[str] = None
     bank_account_last4: Optional[str] = None
+    bank_ifsc_code: Optional[str] = None
+    bank_name: Optional[str] = None
     center_name: Optional[str] = None
     center_code: Optional[str] = None
     profile_image_url: Optional[str] = None

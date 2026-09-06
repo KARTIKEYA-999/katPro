@@ -384,7 +384,9 @@ def test_official_farmer_edit_and_persistence():
         "district": "Suryapet",
         "land_area_acres": 5.75,
         "primary_crop": "Cotton",
-        "bank_account_number": "999988887777"
+        "bank_account_number": "999988887777",
+        "bank_ifsc_code": "SBIN0008888",
+        "bank_name": "State Bank of India - Suryapet Branch"
     }
     update_res = client.put(f"/api/official/farmers/{farmer_id}", json=update_payload, headers=official_headers)
     assert update_res.status_code == 200, f"Expected 200, got: {update_res.text}"
@@ -397,6 +399,8 @@ def test_official_farmer_edit_and_persistence():
     assert updated_data["land_size_acres"] == 5.75
     assert updated_data["primary_crop"] == "Cotton"
     assert updated_data["bank_account_last4"] == "7777"
+    assert updated_data["bank_ifsc_code"] == "SBIN0008888"
+    assert updated_data["bank_name"] == "State Bank of India - Suryapet Branch"
 
     # 3. Verify persistence via GET /api/official/farmers
     list_res = client.get("/api/official/farmers", headers=official_headers)
@@ -412,6 +416,8 @@ def test_official_farmer_edit_and_persistence():
     assert found["land_size_acres"] == 5.75
     assert found["primary_crop"] == "Cotton"
     assert found["bank_account_last4"] == "7777"
+    assert found["bank_ifsc_code"] == "SBIN0008888"
+    assert found["bank_name"] == "State Bank of India - Suryapet Branch"
 
     # 4. Verify duplicate phone conflict returns 400
     conflict_res = client.put(

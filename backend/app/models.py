@@ -66,6 +66,10 @@ class Farmer(Base):
     land_size_acres = Column(Numeric(6, 2), nullable=False, default=2.50)
     primary_crop = Column(String(64), nullable=False, default="Paddy")
     bank_account_last4 = Column(String(4), nullable=True)
+    passbook_number = Column(String(64), nullable=True)
+    bank_account_number = Column(String(64), nullable=True)
+    bank_ifsc_code = Column(String(32), nullable=True)
+    bank_name = Column(String(128), nullable=True)
     profile_image_url = Column(Text, nullable=True)
     approval_status = Column(String(32), nullable=False, default="PENDING", index=True) # PENDING, APPROVED, REJECTED
     approval_remarks = Column(Text, nullable=True)

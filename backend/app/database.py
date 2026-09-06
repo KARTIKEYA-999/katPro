@@ -52,6 +52,16 @@ def init_db():
                     logger.info("Successfully executed seed.sql")
             else:
                 logger.info("PostgreSQL database connection verified and schema is present.")
+
+            # Ensure new columns on farmers table are present
+            try:
+                conn.execute(text("ALTER TABLE farmers ADD COLUMN IF NOT EXISTS bank_name VARCHAR(128);"))
+                conn.execute(text("ALTER TABLE farmers ADD COLUMN IF NOT EXISTS bank_ifsc_code VARCHAR(32);"))
+                conn.execute(text("ALTER TABLE farmers ADD COLUMN IF NOT EXISTS passbook_number VARCHAR(64);"))
+                conn.execute(text("ALTER TABLE farmers ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(64);"))
+                conn.commit()
+            except Exception as col_err:
+                logger.debug(f"Column check notice: {col_err}")
     except Exception as e:
         logger.error(f"Error initializing or verifying database: {e}")
         raise

@@ -211,23 +211,39 @@ async def complete_procurement_transaction(
     msp_rate = float(commodity.msp_per_quintal)
     final_amount = round(net_weight * msp_rate, 2)
 
-    txn_ref = f"TXN-{date.today().strftime('%Y%m%d')}-{token.id:04d}"
+    # Check if a transaction was already created for this token
+    txn = db.query(ProcurementTransaction).filter(ProcurementTransaction.token_id == token.id).first()
+    if txn:
+        txn.gross_weight_qtl = req.gross_weight_qtl
+        txn.tare_weight_qtl = req.tare_weight_qtl
+        txn.net_weight_qtl = net_weight
+        txn.moisture_content_pct = req.moisture_content_pct
+        txn.quality_grade = req.quality_grade
+        txn.msp_rate = msp_rate
+        txn.final_amount = final_amount
+        txn_ref = txn.transaction_ref
+    else:
+        base_ref = f"TXN-{date.today().strftime('%Y%m%d')}-{token.id:04d}"
+        if db.query(ProcurementTransaction).filter(ProcurementTransaction.transaction_ref == base_ref).first():
+            txn_ref = f"{base_ref}-{uuid.uuid4().hex[:4].upper()}"
+        else:
+            txn_ref = base_ref
 
-    txn = ProcurementTransaction(
-        transaction_ref=txn_ref,
-        booking_id=booking.id,
-        token_id=token.id,
-        center_id=center.id,
-        gross_weight_qtl=req.gross_weight_qtl,
-        tare_weight_qtl=req.tare_weight_qtl,
-        net_weight_qtl=net_weight,
-        moisture_content_pct=req.moisture_content_pct,
-        quality_grade=req.quality_grade,
-        msp_rate=msp_rate,
-        final_amount=final_amount,
-        payment_status="DIRECT_BENEFIT_TRANSFER"
-    )
-    db.add(txn)
+        txn = ProcurementTransaction(
+            transaction_ref=txn_ref,
+            booking_id=booking.id,
+            token_id=token.id,
+            center_id=center.id,
+            gross_weight_qtl=req.gross_weight_qtl,
+            tare_weight_qtl=req.tare_weight_qtl,
+            net_weight_qtl=net_weight,
+            moisture_content_pct=req.moisture_content_pct,
+            quality_grade=req.quality_grade,
+            msp_rate=msp_rate,
+            final_amount=final_amount,
+            payment_status="DIRECT_BENEFIT_TRANSFER"
+        )
+        db.add(txn)
 
     token.status = "COMPLETED"
     token.completed_at = datetime.utcnow()
@@ -465,9 +481,12 @@ def get_official_farmers(
             land_size_acres=float(f.land_size_acres),
             land_area_acres=float(f.land_size_acres),
             aadhaar_number=f"XXXX-XXXX-{1000 + f.id:04d}",
-            passbook_number=f"TS-PB-{f.id:04d}",
+            passbook_number=f.passbook_number or f"TS-PB-{f.id:04d}",
             primary_crop=f.primary_crop,
-            bank_account_last4=f.bank_account_last4 or f"{1000 + f.id}",
+            bank_account_number=f.bank_account_number,
+            bank_account_last4=f.bank_account_last4 or (f.bank_account_number[-4:] if f.bank_account_number else f"{1000 + f.id}"),
+            bank_ifsc_code=f.bank_ifsc_code,
+            bank_name=f.bank_name,
             profile_image_url=f.profile_image_url,
             approval_status=f.approval_status,
             approval_remarks=f.approval_remarks,
@@ -515,7 +534,11 @@ def create_official_farmer(
         state=req.state,
         land_size_acres=req.land_area_acres if req.land_area_acres is not None else req.land_size_acres,
         primary_crop=req.primary_crop,
+        passbook_number=req.passbook_number,
+        bank_account_number=req.bank_account_number,
         bank_account_last4=req.bank_account_number[-4:] if req.bank_account_number else req.bank_account_last4,
+        bank_ifsc_code=req.bank_ifsc_code,
+        bank_name=req.bank_name,
         approval_status="PENDING", # Requires Admin approval before booking
         approval_remarks=None
     )
@@ -538,9 +561,12 @@ def create_official_farmer(
         land_size_acres=float(farmer.land_size_acres),
         land_area_acres=float(farmer.land_size_acres),
         aadhaar_number=f"XXXX-XXXX-{1000 + farmer.id:04d}",
-        passbook_number=f"TS-PB-{farmer.id:04d}",
+        passbook_number=farmer.passbook_number or f"TS-PB-{farmer.id:04d}",
         primary_crop=farmer.primary_crop,
+        bank_account_number=farmer.bank_account_number,
         bank_account_last4=farmer.bank_account_last4,
+        bank_ifsc_code=farmer.bank_ifsc_code,
+        bank_name=farmer.bank_name,
         profile_image_url=farmer.profile_image_url,
         approval_status=farmer.approval_status,
         approval_remarks=farmer.approval_remarks,
@@ -592,12 +618,21 @@ def update_official_farmer(
         farmer.land_size_acres = req.land_size_acres
     if req.primary_crop is not None and req.primary_crop.strip():
         farmer.primary_crop = req.primary_crop.strip()
-    if req.bank_account_last4 is not None and req.bank_account_last4.strip():
+    if req.passbook_number is not None:
+        farmer.passbook_number = req.passbook_number.strip() if req.passbook_number.strip() else None
+    if req.bank_ifsc_code is not None:
+        farmer.bank_ifsc_code = req.bank_ifsc_code.strip() if req.bank_ifsc_code.strip() else None
+    if req.bank_name is not None:
+        farmer.bank_name = req.bank_name.strip() if req.bank_name.strip() else None
+    if req.bank_account_number is not None:
+        clean_num = req.bank_account_number.strip()
+        if clean_num and not clean_num.startswith("•"):
+            farmer.bank_account_number = clean_num
+            clean_digits = "".join(filter(str.isdigit, clean_num))
+            if len(clean_digits) >= 4:
+                farmer.bank_account_last4 = clean_digits[-4:]
+    elif req.bank_account_last4 is not None and req.bank_account_last4.strip():
         farmer.bank_account_last4 = req.bank_account_last4.strip()[-4:]
-    elif req.bank_account_number and req.bank_account_number.strip() and not req.bank_account_number.strip().startswith("•"):
-        clean_acc = "".join(filter(str.isdigit, req.bank_account_number.strip()))
-        if len(clean_acc) >= 4:
-            farmer.bank_account_last4 = clean_acc[-4:]
 
     db.commit()
     db.refresh(farmer)
@@ -618,9 +653,12 @@ def update_official_farmer(
         land_size_acres=float(farmer.land_size_acres),
         land_area_acres=float(farmer.land_size_acres),
         aadhaar_number=f"XXXX-XXXX-{1000 + farmer.id:04d}",
-        passbook_number=req.passbook_number or f"TS-PB-{farmer.id:04d}",
+        passbook_number=farmer.passbook_number or f"TS-PB-{farmer.id:04d}",
         primary_crop=farmer.primary_crop,
+        bank_account_number=farmer.bank_account_number,
         bank_account_last4=farmer.bank_account_last4,
+        bank_ifsc_code=farmer.bank_ifsc_code,
+        bank_name=farmer.bank_name,
         profile_image_url=farmer.profile_image_url,
         approval_status=farmer.approval_status,
         approval_remarks=farmer.approval_remarks,

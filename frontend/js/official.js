@@ -93,15 +93,15 @@ function renderQueueTable(items) {
                 <td><small style="color: var(--text-muted);">${item.slot_name}</small></td>
                 <td><span class="badge ${badgeClass}">${item.status}</span></td>
                 <td>
-                    <div style="display: flex; gap: 6px;">
+                    <div style="display: flex; gap: 6px; align-items: center;">
                         ${item.status === 'WAITING' ? `
-                            <button class="btn btn-outline" style="padding: 4px 8px; min-height: 32px; font-size: 0.8rem;" onclick="skipFarmerToken(${item.token_id})">
-                                Skip
+                            <button class="btn btn-outline" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="skipFarmerToken(${item.token_id})" title="Skip / Mark No-Show" aria-label="Skip Farmer">
+                                ⏭️
                             </button>
                         ` : ''}
                         ${item.status === 'PROCESSING' ? `
-                            <button class="btn btn-success" style="padding: 4px 10px; min-height: 32px; font-size: 0.8rem;" onclick="openWeighModal(${item.token_id})">
-                                Weigh
+                            <button class="btn btn-success" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="openWeighModal(${item.token_id})" title="Weigh & Complete Transaction" aria-label="Weigh Farmer">
+                                ⚖️
                             </button>
                         ` : ''}
                     </div>
@@ -365,15 +365,15 @@ function renderOfficialFarmersTable(farmers) {
                     ` : ''}
                 </td>
                 <td>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                        <button class="btn btn-primary" style="padding: 4px 10px; min-height: 28px; font-size: 0.82rem; font-weight: 600;" onclick="openFarmerRegistrationFormModal(${f.id})">
-                            📄 Download Form
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn btn-primary btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="openFarmerRegistrationFormModal(${f.id})" title="Download / Print Registration Certificate" aria-label="Download Form">
+                            📄
                         </button>
-                        <button class="btn btn-outline" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="openOfficialEditFarmerModal(${f.id})">
-                            ✏️ Edit
+                        <button class="btn btn-outline btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="openOfficialEditFarmerModal(${f.id})" title="Edit Farmer Profile" aria-label="Edit Profile">
+                            ✏️
                         </button>
-                        <button class="btn btn-danger" style="padding: 4px 8px; min-height: 28px; font-size: 0.8rem;" onclick="deleteOfficialFarmer(${f.id}, '${escapeHtml(f.full_name)}')">
-                            🗑️ Delete
+                        <button class="btn btn-danger btn-sm" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="deleteOfficialFarmer(${f.id}, '${escapeHtml(f.full_name)}')" title="Delete Farmer Record" aria-label="Delete Farmer">
+                            🗑️
                         </button>
                     </div>
                 </td>
@@ -540,12 +540,12 @@ async function handleOfficialUpdateFarmer(e) {
         primary_crop: crop || "Paddy"
     };
 
-    if (passbook) payload.passbook_number = passbook;
+    payload.passbook_number = passbook;
+    payload.bank_ifsc_code = bankIfsc;
+    payload.bank_name = bankName;
     if (bankAcc && !bankAcc.startsWith("•")) {
         payload.bank_account_number = bankAcc;
     }
-    if (bankIfsc) payload.bank_ifsc_code = bankIfsc;
-    if (bankName) payload.bank_name = bankName;
 
     const saveBtn = document.getElementById("btn-save-official-farmer");
     const origText = saveBtn ? saveBtn.innerHTML : "💾 Save Profile";
