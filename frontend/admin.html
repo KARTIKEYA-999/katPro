@@ -256,12 +256,10 @@
                 <div class="card-header">
                     <div>
                         <h2>🏛️ <span data-i18n="co_management">Central Office Users Management</span></h2>
-                        <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">Create, configure, and manage Central Office officials assigned to procurement centers.</p>
+                        <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">Search, configure, and manage Central Office officials assigned to procurement centers.</p>
                     </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="openAdminCreateOfficialModal()">
-                            ➕ Add Central Office User
-                        </button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <input type="text" id="admin-official-search" class="form-control" style="min-height: 38px; width: 250px;" placeholder="Search official, username, center..." onkeyup="filterAdminOfficialsTable()">
                         <button class="btn btn-outline" onclick="loadAdminOfficials()">
                             🔄 Refresh
                         </button>

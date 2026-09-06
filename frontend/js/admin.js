@@ -495,7 +495,12 @@ async function loadAdminOfficials() {
         const badge = document.getElementById("tab-badge-officials");
         if (badge) badge.textContent = officials.length;
 
-        renderAdminOfficialsTable(officials);
+        const searchInp = document.getElementById("admin-official-search");
+        if (searchInp && searchInp.value.trim()) {
+            filterAdminOfficialsTable();
+        } else {
+            renderAdminOfficialsTable(officials);
+        }
     } catch (e) {
         console.error("Failed to load officials:", e);
         if (tbody && (!adminOfficials || adminOfficials.length === 0)) {
@@ -509,7 +514,7 @@ function renderAdminOfficialsTable(officials) {
     if (!tbody) return;
 
     if (!officials || officials.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">No Central Office users found. Click "Add Central Office User" to create one.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">No Central Office users found matching search criteria.</td></tr>`;
         return;
     }
 
@@ -535,6 +540,23 @@ function renderAdminOfficialsTable(officials) {
             </td>
         </tr>
     `).join('');
+}
+
+function filterAdminOfficialsTable() {
+    const searchInp = document.getElementById("admin-official-search");
+    const q = (searchInp ? searchInp.value : "").toLowerCase().trim();
+    if (!adminOfficials) return;
+    const filtered = adminOfficials.filter(o =>
+        (o.username && o.username.toLowerCase().includes(q)) ||
+        (o.full_name && o.full_name.toLowerCase().includes(q)) ||
+        (o.designation && o.designation.toLowerCase().includes(q)) ||
+        (o.center_name && o.center_name.toLowerCase().includes(q)) ||
+        (o.center_code && o.center_code.toLowerCase().includes(q)) ||
+        (o.district && o.district.toLowerCase().includes(q)) ||
+        (o.phone && o.phone.toLowerCase().includes(q)) ||
+        (o.email && o.email.toLowerCase().includes(q))
+    );
+    renderAdminOfficialsTable(filtered);
 }
 
 function switchAdminTab(tabName) {
@@ -927,5 +949,7 @@ window.closeAdminRejectFarmerModal = closeAdminRejectFarmerModal;
 window.handleAdminRejectFarmer = handleAdminRejectFarmer;
 window.filterAdminFarmersTable = filterAdminFarmersTable;
 window.filterAdminFarmers = filterAdminFarmersTable;
+window.filterAdminOfficialsTable = filterAdminOfficialsTable;
+window.filterAdminOfficials = filterAdminOfficialsTable;
 window.toggleUserStatus = toggleUserStatus;
 
