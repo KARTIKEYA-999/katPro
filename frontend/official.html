@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Official Control Room | Procurement Management System</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.3.0">
     <script>
         (function() {
             const token = localStorage.getItem("sih_procurement_token") || localStorage.getItem("sih_token");
@@ -187,7 +187,7 @@
                     <div>
                         <h2>👨‍🌾 <span data-i18n="farmer_registry">Farmer Registry Management</span></h2>
                         <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
-                            Enroll new farmers and update existing records in the procurement registry.
+                            Procurement Center: <strong id="registry-center-name" style="color: var(--primary-color);">Assigned Center</strong> • Showing enrolled farmers
                         </p>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
@@ -205,7 +205,7 @@
                                 <th>Farmer Code</th>
                                 <th>Full Name</th>
                                 <th>Contact</th>
-                                <th>Aadhaar</th>
+                                <th>Assigned Center</th>
                                 <th>Location</th>
                                 <th>Land (Acres)</th>
                                 <th>Primary Crop</th>
@@ -285,6 +285,166 @@
         </div>
     </div>
 
+    <!-- 4b. MODAL: FARMER PAYMENT & DBT DISBURSEMENT DETAILS -->
+    <div class="modal-overlay" id="payment-details-modal" style="display: none;">
+        <div class="modal" style="max-width: 560px;">
+            <div class="modal-header">
+                <h3>💳 Farmer DBT Payment Details</h3>
+                <button class="btn-close" onclick="closePaymentDetailsModal()">&times;</button>
+            </div>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px; font-size: 0.88rem; color: #166534; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.3rem;">🌾</span>
+                <div>
+                    <strong>Direct Benefit Transfer (DBT) Payout</strong>
+                    <div style="font-size: 0.82rem; color: #15803d;">MSP procurement payout will be processed securely via Razorpay DBT API directly to the farmer's bank account.</div>
+                </div>
+            </div>
+
+            <form id="payment-details-form" onsubmit="handleProceedToRazorpay(event)">
+                <!-- Beneficiary Farmer Info -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Beneficiary Farmer</span>
+                        <span id="pay-token-badge" class="badge badge-live" style="font-size: 0.78rem;">Token A018</span>
+                    </div>
+                    <div style="font-weight: 700; font-size: 1.05rem; color: #0f172a;" id="pay-farmer-name">Ramesh Kumar Goud</div>
+                    <div style="font-size: 0.84rem; color: var(--text-muted); margin-top: 2px;">
+                        Farmer Code: <span id="pay-farmer-code" style="font-weight: 600; color: #334155;">FAR-TS-001</span> • 
+                        Phone: <span id="pay-farmer-phone" style="font-weight: 600; color: #334155;">+91 94401 22001</span>
+                    </div>
+                </div>
+
+                <!-- Bank & Account Details (Editable / Confirmable) -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Bank Name</label>
+                        <input type="text" id="pay-bank-name" class="form-control" value="State Bank of India" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">IFSC Code</label>
+                        <input type="text" id="pay-bank-ifsc" class="form-control" value="SBIN0020112" required style="font-family: monospace; text-transform: uppercase;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 12px; margin-bottom: 14px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">Bank Account Number</label>
+                        <input type="text" id="pay-bank-account" class="form-control" value="382910484821" required style="font-family: monospace; font-weight: 600;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 0.85rem; font-weight: 600;">UPI VPA (Optional)</label>
+                        <input type="text" id="pay-upi-id" class="form-control" value="9440122001@upi" placeholder="farmer@upi">
+                    </div>
+                </div>
+
+                <!-- Payout Breakdown Summary -->
+                <div class="payment-summary-box">
+                    <div class="payment-summary-row">
+                        <span style="color: var(--text-muted);">Commodity & Grade:</span>
+                        <strong id="pay-commodity-grade">Paddy / Rice (Grade-A)</strong>
+                    </div>
+                    <div class="payment-summary-row">
+                        <span style="color: var(--text-muted);">Net Certified Weight:</span>
+                        <strong id="pay-net-weight-display">40.00 Qtl</strong>
+                    </div>
+                    <div class="payment-summary-row">
+                        <span style="color: var(--text-muted);">Official MSP Rate:</span>
+                        <strong id="pay-msp-rate-display">₹2,203.00 / Qtl</strong>
+                    </div>
+                    <div class="payment-total-row">
+                        <span>Total DBT Disbursement:</span>
+                        <span id="pay-final-amount-display">₹88,120.00</span>
+                    </div>
+                </div>
+
+                <!-- Razorpay Gateway Badge -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: #475569;">
+                        <span>🔒 Secured with</span>
+                        <strong style="color: #0284c7;">Razorpay DBT Gateway</strong>
+                    </div>
+                    <span class="rzp-tag-test">Test Sandbox Mode</span>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button type="submit" id="btn-pay-razorpay" class="btn btn-success" style="flex: 1.4; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                        <span>💳 Pay via Razorpay</span>
+                        <span id="btn-pay-amount-label">(₹88,120.00)</span>
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="backToWeighbridge()" style="flex: 0.8;">↩️ Back</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4c. MODAL: RAZORPAY DUMMY CHECKOUT GATEWAY -->
+    <div class="modal-overlay" id="razorpay-simulation-modal" style="display: none; z-index: 10000;">
+        <div class="rzp-modal-window">
+            <div class="rzp-header">
+                <div class="rzp-header-top">
+                    <div class="rzp-logo-badge">
+                        <span>⚡ Razorpay</span>
+                        <span class="rzp-tag-test">TEST MODE</span>
+                    </div>
+                    <button class="btn-close" style="color: #ffffff; font-size: 1.5rem;" onclick="closeRazorpaySimModal()">&times;</button>
+                </div>
+                <div style="font-size: 0.82rem; opacity: 0.85;">Government DBT Agricultural Payout</div>
+                <div class="rzp-amount-display" id="rzp-display-amount">₹88,120.00</div>
+                <div style="font-size: 0.84rem; opacity: 0.9;" id="rzp-display-beneficiary">Beneficiary: Ramesh Kumar Goud</div>
+            </div>
+
+            <div class="rzp-body">
+                <div style="font-size: 0.84rem; font-weight: 700; color: #475569; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Select Payment Method
+                </div>
+                <div class="rzp-payment-methods">
+                    <div class="rzp-method-option selected" id="rzp-opt-dbt" onclick="selectRzpMethod(this, 'DIRECT_DBT')">
+                        <span>🏛️</span>
+                        <span>Direct DBT Bank</span>
+                    </div>
+                    <div class="rzp-method-option" id="rzp-opt-upi" onclick="selectRzpMethod(this, 'UPI')">
+                        <span>📱</span>
+                        <span>UPI / VPA</span>
+                    </div>
+                    <div class="rzp-method-option" id="rzp-opt-netbanking" onclick="selectRzpMethod(this, 'NETBANKING')">
+                        <span>🌐</span>
+                        <span>NetBanking</span>
+                    </div>
+                    <div class="rzp-method-option" id="rzp-opt-card" onclick="selectRzpMethod(this, 'CORPORATE_CARD')">
+                        <span>💳</span>
+                        <span>Gov Card</span>
+                    </div>
+                </div>
+
+                <div id="rzp-method-detail-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.85rem;">
+                    <div style="color: #64748b; font-size: 0.78rem; text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Payout Destination</div>
+                    <div id="rzp-destination-display" style="font-weight: 600; color: #1e293b;">Direct DBT Bank A/c: 382910484821 (SBIN0020112)</div>
+                </div>
+
+                <div class="rzp-sim-panel">
+                    <div class="rzp-sim-title">
+                        <span>⚙️ Razorpay Sandbox Gateway Response</span>
+                    </div>
+                    <p style="font-size: 0.82rem; color: #713f12; margin: 0 0 12px 0; line-height: 1.4;">
+                        Select gateway response to complete DBT disbursement or simulate failure:
+                    </p>
+                    <button type="button" class="rzp-btn-success" id="btn-rzp-sim-success" onclick="executeRazorpaySimulation('SUCCESS')">
+                        <span>✅ Authorize & Disburse Payout (Success)</span>
+                    </button>
+                    <button type="button" class="rzp-btn-danger" id="btn-rzp-sim-failure" onclick="executeRazorpaySimulation('FAILED')">
+                        <span>❌ Decline Payment (Simulate Failure)</span>
+                    </button>
+                </div>
+
+                <div style="text-align: center; margin-top: 14px;">
+                    <button type="button" class="btn btn-outline" style="font-size: 0.84rem; padding: 6px 14px;" onclick="closeRazorpaySimModal()">
+                        Cancel & Return
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 5. MODAL: BROADCAST ANNOUNCEMENT -->
     <div class="modal-overlay" id="announcement-modal" style="display: none;">
         <div class="modal">
@@ -325,6 +485,10 @@
                 <button class="btn-close" onclick="closeOfficialCreateFarmerModal()">&times;</button>
             </div>
             <form id="official-create-farmer-form" onsubmit="handleOfficialCreateFarmer(event)">
+                <div style="background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem; color: #0369a1; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🏢 <strong>Assigned Center:</strong> <span id="create-farmer-center-badge">Assigned Center</span></span>
+                    <span class="badge" style="font-size: 0.75rem; background: #0284c7; color: white; padding: 3px 8px; border-radius: 4px;">Auto-Bound</span>
+                </div>
                 <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem; color: #166534;">
                     ℹ️ Newly enrolled farmers will be registered with <strong>PENDING</strong> status and queued for State Administrator verification.
                 </div>
@@ -647,8 +811,8 @@
         <p>Smart India Hackathon 2026 • Problem Statement PS ID: 26032 • Official Control Console</p>
     </footer>
 
-    <script src="/static/js/i18n.js?v=2.2.0"></script>
-    <script src="/static/js/app.js?v=2.2.0"></script>
-    <script src="/static/js/official.js?v=2.2.0"></script>
+    <script src="/static/js/i18n.js?v=2.3.0"></script>
+    <script src="/static/js/app.js?v=2.3.0"></script>
+    <script src="/static/js/official.js?v=2.3.0"></script>
 </body>
 </html>

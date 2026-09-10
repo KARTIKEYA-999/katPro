@@ -45,6 +45,10 @@ def get_official_dashboard(
         Token.center_id == center.id,
         func.date(Token.issued_at) == date.today()
     ).all()
+    if not tokens:
+        tokens = db.query(Token).filter(
+            Token.center_id == center.id
+        ).all()
 
     total_today = len(tokens)
     waiting_count = sum(1 for t in tokens if t.status == "WAITING")
@@ -52,7 +56,17 @@ def get_official_dashboard(
     completed_count = sum(1 for t in tokens if t.status == "COMPLETED")
     skipped_count = sum(1 for t in tokens if t.status == "SKIPPED")
 
-    current_token_str = f"A{center.current_token_seq:03d}" if center.current_token_seq > 0 else "None"
+    current_token_obj = db.query(Token).filter(
+        Token.center_id == center.id,
+        Token.sequence_number == center.current_token_seq
+    ).first()
+    if current_token_obj:
+        current_token_str = current_token_obj.token_number
+    elif center.current_token_seq > 0:
+        prefix = center.center_code[0] if center.center_code else "T"
+        current_token_str = f"{prefix}{center.current_token_seq:03d}"
+    else:
+        current_token_str = "None"
 
     # Average wait time estimation for queue using C module parameters
     est_wait_min = 0
@@ -92,18 +106,29 @@ def get_official_queue(
         func.date(Token.issued_at) == date.today()
     ).order_by(Token.sequence_number.asc()).all()
 
+    if not tokens:
+        tokens = db.query(Token).filter(
+            Token.center_id == center.id
+        ).order_by(Token.sequence_number.asc()).all()
+
     queue_list = []
     for t in tokens:
         booking = t.booking
-        farmer_user = booking.farmer.user
+        farmer = booking.farmer
+        farmer_user = farmer.user
         queue_list.append({
             "token_id": t.id,
             "token_number": t.token_number,
             "sequence_number": t.sequence_number,
             "farmer_name": farmer_user.full_name,
             "farmer_phone": farmer_user.phone,
-            "village": booking.farmer.village,
+            "farmer_code": farmer.farmer_code,
+            "village": farmer.village,
+            "bank_name": farmer.bank_name or "State Bank of India",
+            "bank_account_number": farmer.bank_account_number or f"38291048{farmer.bank_account_last4 or '4821'}",
+            "bank_ifsc_code": farmer.bank_ifsc_code or "SBIN0020112",
             "commodity": booking.commodity.name,
+            "msp_rate": float(booking.commodity.msp_per_quintal),
             "estimated_quantity_qtl": float(booking.estimated_quantity_quintals),
             "vehicle_number": booking.vehicle_number or "N/A",
             "status": t.status,
@@ -112,6 +137,54 @@ def get_official_queue(
             "called_at": t.called_at.strftime("%H:%M:%S") if t.called_at else None
         })
     return queue_list
+
+@router.get("/token-payment-details/{token_id}")
+def get_token_payment_details(
+    token_id: int,
+    current_user: User = Depends(require_official),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves farmer beneficiary and payment details for a specific token
+    to prefill the Razorpay DBT disbursement modal.
+    """
+    center = get_official_center(current_user, db)
+    token = db.query(Token).filter(Token.id == token_id, Token.center_id == center.id).first()
+    if not token:
+        raise HTTPException(status_code=404, detail="Token not found")
+
+    booking = token.booking
+    farmer = booking.farmer
+    user = farmer.user
+    commodity = booking.commodity
+
+    acc_num = farmer.bank_account_number or f"38291048{farmer.bank_account_last4 or '4821'}"
+    ifsc = farmer.bank_ifsc_code or "SBIN0020112"
+    bank = farmer.bank_name or "State Bank of India"
+    clean_phone = user.phone.replace("+91", "").strip() if user.phone else "farmer"
+
+    txn = db.query(ProcurementTransaction).filter(ProcurementTransaction.token_id == token.id).first()
+
+    return {
+        "token_id": token.id,
+        "token_number": token.token_number,
+        "status": token.status,
+        "farmer_id": farmer.id,
+        "farmer_code": farmer.farmer_code,
+        "farmer_name": user.full_name,
+        "farmer_phone": user.phone or "+91 98480 11001",
+        "bank_name": bank,
+        "bank_account_number": txn.bank_account_number if txn and txn.bank_account_number else acc_num,
+        "bank_ifsc_code": txn.bank_ifsc if txn and txn.bank_ifsc else ifsc,
+        "upi_id": f"{clean_phone}@upi",
+        "commodity_id": commodity.id,
+        "commodity_name": commodity.name,
+        "msp_rate": float(commodity.msp_per_quintal),
+        "estimated_quantity_qtl": float(booking.estimated_quantity_quintals),
+        "transaction_ref": txn.transaction_ref if txn else None,
+        "payment_status": txn.payment_status if txn else None,
+        "failure_reason": txn.failure_reason if txn else None
+    }
 
 @router.post("/call-next")
 async def call_next_token(
@@ -131,7 +204,7 @@ async def call_next_token(
     if center.status == "PAUSED":
         raise HTTPException(status_code=400, detail="Center queue is currently PAUSED. Please resume operations first.")
 
-    # Find next waiting token
+    # Find next waiting token for this center
     next_token = db.query(Token).filter(
         Token.center_id == center.id,
         func.date(Token.issued_at) == date.today(),
@@ -139,12 +212,18 @@ async def call_next_token(
     ).order_by(Token.sequence_number.asc()).first()
 
     if not next_token:
-        raise HTTPException(status_code=400, detail="No more farmers waiting in queue today.")
+        # Fallback to any active waiting tokens for this center
+        next_token = db.query(Token).filter(
+            Token.center_id == center.id,
+            Token.status == "WAITING"
+        ).order_by(Token.sequence_number.asc()).first()
 
-    # Update previous processing token if any
+    if not next_token:
+        raise HTTPException(status_code=400, detail=f"No more farmers waiting in queue today for {center.name}.")
+
+    # Update previous processing token if any for this center
     prev_processing = db.query(Token).filter(
         Token.center_id == center.id,
-        func.date(Token.issued_at) == date.today(),
         Token.status == "PROCESSING"
     ).all()
     for pt in prev_processing:
@@ -194,7 +273,9 @@ async def complete_procurement_transaction(
     db: Session = Depends(get_db)
 ):
     """
-    Completes weighing, quality inspection, and records official procurement transaction.
+    Completes weighing, quality inspection, and records official procurement transaction
+    with Razorpay dummy payment integration.
+    Supports both SUCCESS and PAYMENT_FAILED statuses.
     """
     center = get_official_center(current_user, db)
     token = db.query(Token).filter(Token.id == req.token_id, Token.center_id == center.id).first()
@@ -210,6 +291,8 @@ async def complete_procurement_transaction(
 
     msp_rate = float(commodity.msp_per_quintal)
     final_amount = round(net_weight * msp_rate, 2)
+
+    is_success = (req.payment_status or "SUCCESS").upper() in ["SUCCESS", "COMPLETED", "DIRECT_BENEFIT_TRANSFER"]
 
     # Check if a transaction was already created for this token
     txn = db.query(ProcurementTransaction).filter(ProcurementTransaction.token_id == token.id).first()
@@ -241,42 +324,109 @@ async def complete_procurement_transaction(
             quality_grade=req.quality_grade,
             msp_rate=msp_rate,
             final_amount=final_amount,
-            payment_status="DIRECT_BENEFIT_TRANSFER"
+            payment_status="PENDING",
+            processed_by=current_user.official_profile.id if current_user.official_profile else None
         )
         db.add(txn)
 
-    token.status = "COMPLETED"
-    token.completed_at = datetime.utcnow()
-    booking.status = "COMPLETED"
+    # Store bank details & method
+    txn.bank_account_number = req.bank_account_number or booking.farmer.bank_account_number or f"38291048{booking.farmer.bank_account_last4 or '4821'}"
+    txn.bank_ifsc = req.bank_ifsc or booking.farmer.bank_ifsc_code or "SBIN0020112"
+    txn.payment_method = req.payment_method or "RAZORPAY_DBT"
 
-    # Farmer DBT notification
     farmer_user_id = booking.farmer.user_id
-    notif = Notification(
-        user_id=farmer_user_id,
-        title=f"Procurement Receipt: {txn_ref}",
-        message=f"Net Weight: {net_weight} Qtl ({commodity.name}). Total Amount: Rs {final_amount:,.2f}. Dispatched for DBT transfer.",
-        notification_type="SUCCESS"
-    )
-    db.add(notif)
-    db.commit()
 
-    # Broadcast completion update
-    await manager.broadcast_to_center(center.id, {
-        "event": "TRANSACTION_COMPLETED",
-        "center_id": center.id,
-        "token_number": token.token_number,
-        "txn_ref": txn_ref,
-        "net_weight_qtl": net_weight,
-        "final_amount": final_amount
-    })
+    if is_success:
+        payment_id = req.razorpay_payment_id or f"pay_dummy_rzp_{uuid.uuid4().hex[:10]}"
+        order_id = req.razorpay_order_id or f"order_dbt_{token.id}_{int(datetime.utcnow().timestamp())}"
 
-    return {
-        "message": f"Procurement completed for {token.token_number}",
-        "transaction_ref": txn_ref,
-        "net_weight_qtl": net_weight,
-        "final_amount": final_amount,
-        "payment_status": "DIRECT_BENEFIT_TRANSFER"
-    }
+        txn.razorpay_payment_id = payment_id
+        txn.razorpay_order_id = order_id
+        txn.payment_status = "DIRECT_BENEFIT_TRANSFER"
+        txn.failure_reason = None
+
+        token.status = "COMPLETED"
+        token.completed_at = datetime.utcnow()
+        booking.status = "COMPLETED"
+
+        if token.queue_entry:
+            token.queue_entry.status = "SERVED"
+
+        # Farmer DBT notification
+        notif = Notification(
+            user_id=farmer_user_id,
+            title=f"DBT Disbursed via Razorpay: {txn_ref}",
+            message=f"₹{final_amount:,.2f} disbursed for {net_weight} Qtl {commodity.name}. Razorpay Ref: {payment_id}. Account: {txn.bank_account_number}.",
+            notification_type="SUCCESS"
+        )
+        db.add(notif)
+        db.commit()
+
+        # Broadcast completion update
+        await manager.broadcast_to_center(center.id, {
+            "event": "TRANSACTION_COMPLETED",
+            "center_id": center.id,
+            "token_id": token.id,
+            "token_number": token.token_number,
+            "txn_ref": txn_ref,
+            "net_weight_qtl": net_weight,
+            "final_amount": final_amount,
+            "payment_status": "DIRECT_BENEFIT_TRANSFER",
+            "razorpay_payment_id": payment_id
+        })
+
+        return {
+            "success": True,
+            "message": f"Procurement completed & Razorpay DBT disbursed for {token.token_number}",
+            "token_status": "COMPLETED",
+            "transaction_ref": txn_ref,
+            "net_weight_qtl": net_weight,
+            "final_amount": final_amount,
+            "payment_status": "DIRECT_BENEFIT_TRANSFER",
+            "razorpay_payment_id": payment_id
+        }
+    else:
+        # Failure flow: Razorpay payment failed
+        reason = req.failure_reason or "Razorpay DBT transfer failed: Bank authorization declined"
+        txn.payment_status = "PAYMENT_FAILED"
+        txn.failure_reason = reason
+        txn.razorpay_payment_id = req.razorpay_payment_id
+
+        token.status = "PAYMENT_FAILED"
+        booking.status = "PAYMENT_FAILED"
+
+        # Farmer alert notification
+        notif = Notification(
+            user_id=farmer_user_id,
+            title=f"Payment Failed: Token {token.token_number}",
+            message=f"Razorpay DBT transfer of ₹{final_amount:,.2f} failed ({reason}). Please visit center counter to re-attempt payment.",
+            notification_type="ALERT"
+        )
+        db.add(notif)
+        db.commit()
+
+        # Broadcast failure update
+        await manager.broadcast_to_center(center.id, {
+            "event": "PAYMENT_FAILED",
+            "center_id": center.id,
+            "token_id": token.id,
+            "token_number": token.token_number,
+            "txn_ref": txn_ref,
+            "final_amount": final_amount,
+            "payment_status": "PAYMENT_FAILED",
+            "reason": reason
+        })
+
+        return {
+            "success": False,
+            "message": f"Payment failed for token {token.token_number}: {reason}",
+            "token_status": "PAYMENT_FAILED",
+            "transaction_ref": txn_ref,
+            "net_weight_qtl": net_weight,
+            "final_amount": final_amount,
+            "payment_status": "PAYMENT_FAILED",
+            "reason": reason
+        }
 
 @router.post("/skip-token")
 async def skip_token(
@@ -451,8 +601,16 @@ def get_official_farmers(
     current_user: User = Depends(require_official),
     db: Session = Depends(get_db)
 ):
-    """Central Office: Lists farmers in registry with optional search and status filter"""
+    """Central Office: Lists farmers assigned to official's procurement center with optional search and status filter"""
+    center = get_official_center(current_user, db)
     query = db.query(Farmer).join(User)
+
+    # Strictly scope to the official's assigned procurement center
+    query = query.filter(
+        (Farmer.center_id == center.id) |
+        (Farmer.center_id.is_(None) & (Farmer.district.ilike(f"%{center.district}%")))
+    )
+
     if approval_status and approval_status.upper() != "ALL":
         query = query.filter(Farmer.approval_status == approval_status.upper())
     if search and search.strip():
@@ -471,6 +629,9 @@ def get_official_farmers(
             user_id=f.user_id,
             username=f.user.username,
             farmer_code=f.farmer_code,
+            center_id=f.center_id or center.id,
+            center_name=f.center.name if f.center else center.name,
+            center_code=f.center.center_code if f.center else center.center_code,
             full_name=f.user.full_name,
             phone=f.user.phone,
             email=f.user.email,
@@ -503,7 +664,9 @@ def create_official_farmer(
     current_user: User = Depends(require_official),
     db: Session = Depends(get_db)
 ):
-    """Central Office: Enrolls a new farmer into the system (submitted for State Admin approval)"""
+    """Central Office: Enrolls a new farmer into the system bound to the official's assigned center"""
+    center = get_official_center(current_user, db)
+
     # Check if username or phone exists
     if db.query(User).filter(User.username == req.username).first():
         raise HTTPException(status_code=400, detail="Username is already registered")
@@ -528,10 +691,11 @@ def create_official_farmer(
     farmer = Farmer(
         user_id=new_user.id,
         farmer_code=farmer_code,
+        center_id=center.id,
         village=req.village,
         mandal=req.mandal,
-        district=req.district,
-        state=req.state,
+        district=req.district if req.district else center.district,
+        state=req.state if req.state else center.state,
         land_size_acres=req.land_area_acres if req.land_area_acres is not None else req.land_size_acres,
         primary_crop=req.primary_crop,
         passbook_number=req.passbook_number,
@@ -551,6 +715,9 @@ def create_official_farmer(
         user_id=new_user.id,
         username=new_user.username,
         farmer_code=farmer.farmer_code,
+        center_id=center.id,
+        center_name=center.name,
+        center_code=center.center_code,
         full_name=new_user.full_name,
         phone=new_user.phone,
         email=new_user.email,
@@ -582,10 +749,13 @@ def update_official_farmer(
     current_user: User = Depends(require_official),
     db: Session = Depends(get_db)
 ):
-    """Central Office: Updates a farmer's demographic or land record"""
+    """Central Office: Updates a farmer's demographic or land record (scoped to assigned center)"""
+    center = get_official_center(current_user, db)
     farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
+    if farmer.center_id is not None and farmer.center_id != center.id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only update farmers belonging to your assigned procurement center.")
     user = farmer.user
 
     if req.full_name is not None and req.full_name.strip():
@@ -643,6 +813,9 @@ def update_official_farmer(
         user_id=user.id,
         username=user.username,
         farmer_code=farmer.farmer_code,
+        center_id=farmer.center_id or center.id,
+        center_name=farmer.center.name if farmer.center else center.name,
+        center_code=farmer.center.center_code if farmer.center else center.center_code,
         full_name=user.full_name,
         phone=user.phone,
         email=user.email,
@@ -673,10 +846,13 @@ def delete_official_farmer(
     current_user: User = Depends(require_official),
     db: Session = Depends(get_db)
 ):
-    """Central Office: Deletes a farmer record from the registry"""
+    """Central Office: Deletes a farmer record from the registry (scoped to assigned center)"""
+    center = get_official_center(current_user, db)
     farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
+    if farmer.center_id is not None and farmer.center_id != center.id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only delete farmers belonging to your assigned procurement center.")
     user = farmer.user
     code = farmer.farmer_code
     db.delete(farmer)
@@ -691,15 +867,17 @@ def get_farmer_registration_form_data(
     db: Session = Depends(get_db)
 ):
     """Central Office: Fetches complete verifiable certificate data for printing the registration form"""
+    center = get_official_center(current_user, db)
     farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
+    if farmer.center_id is not None and farmer.center_id != center.id:
+        raise HTTPException(status_code=403, detail="Access denied. You can only view certificates for farmers belonging to your assigned procurement center.")
     user = farmer.user
     official = db.query(Official).filter(Official.user_id == current_user.id).first()
-    center = official.center if official else None
 
-    center_name = center.name if center else "State Central Procurement Center"
-    center_code = center.center_code if center else "CPC-01"
+    center_name = center.name
+    center_code = center.center_code
 
     return {
         "portal_name": "National Digital Agricultural Procurement System",

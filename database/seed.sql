@@ -12,11 +12,11 @@
 -- -----------------------------------------------------------------------------
 -- 1. PROCUREMENT CENTERS
 -- -----------------------------------------------------------------------------
-INSERT INTO procurement_centers (id, center_code, name, district, state, address, contact_phone, working_hours_start, working_hours_end, daily_capacity_mt, active_counters, avg_processing_seconds, current_token_seq, status) VALUES
-(1, 'CPC-001', 'Central Procurement Center - Suryapet', 'Suryapet', 'Telangana', 'Mandi Road, Near Agricultural Market Yard, Suryapet - 508213', '+91 8684 220101', '08:30:00', '17:30:00', 150.00, 2, 480, 18, 'OPEN'),
-(2, 'RPC-002', 'Rural Farmer Mandi - Miryalaguda', 'Nalgonda', 'Telangana', 'FCI Godown Complex, Bypass Road, Miryalaguda - 508207', '+91 8689 252441', '08:00:00', '17:00:00', 120.00, 2, 450, 12, 'OPEN'),
-(3, 'VPH-003', 'Village Procurement Hub - Warangal', 'Warangal', 'Telangana', 'Enumamula Market Complex, Warangal - 506002', '+91 870 2445100', '09:00:00', '18:00:00', 200.00, 3, 500, 5, 'IN PROGRESS'),
-(4, 'TAC-004', 'Tribal Agri Co-operative - Bhadrachalam', 'Bhadradri Kothagudem', 'Telangana', 'ITC Road, Sarapaka, Bhadrachalam - 507128', '+91 8743 231155', '08:30:00', '16:30:00', 80.00, 1, 600, 0, 'OPEN');
+INSERT INTO procurement_centers (id, center_code, name, district, state, address, contact_phone, working_hours_start, working_hours_end, daily_capacity_mt, active_counters, avg_processing_seconds, current_token_seq, status, latitude, longitude) VALUES
+(1, 'CPC-001', 'Central Procurement Center - Suryapet', 'Suryapet', 'Telangana', 'Mandi Road, Near Agricultural Market Yard, Suryapet - 508213', '+91 8684 220101', '08:30:00', '17:30:00', 150.00, 2, 480, 18, 'OPEN', 17.143900, 79.623600),
+(2, 'RPC-002', 'Rural Farmer Mandi - Miryalaguda', 'Nalgonda', 'Telangana', 'FCI Godown Complex, Bypass Road, Miryalaguda - 508207', '+91 8689 252441', '08:00:00', '17:00:00', 120.00, 2, 450, 12, 'OPEN', 16.871800, 79.563400),
+(3, 'VPH-003', 'Village Procurement Hub - Warangal', 'Warangal', 'Telangana', 'Enumamula Market Complex, Warangal - 506002', '+91 870 2445100', '09:00:00', '18:00:00', 200.00, 3, 500, 5, 'IN PROGRESS', 17.968900, 79.594100),
+(4, 'TAC-004', 'Tribal Agri Co-operative - Bhadrachalam', 'Bhadradri Kothagudem', 'Telangana', 'ITC Road, Sarapaka, Bhadrachalam - 507128', '+91 8743 231155', '08:30:00', '16:30:00', 80.00, 1, 600, 0, 'OPEN', 17.668900, 80.893600);
 
 ALTER SEQUENCE procurement_centers_id_seq RESTART WITH 5;
 
@@ -95,31 +95,31 @@ INSERT INTO users (id, username, password_hash, role, full_name, phone, email, l
 ALTER SEQUENCE users_id_seq RESTART WITH 30;
 
 -- Insert Farmers profiles (Existing 22 are APPROVED, 2 are PENDING for Admin verification demo)
-INSERT INTO farmers (id, user_id, farmer_code, village, mandal, district, state, land_size_acres, primary_crop, bank_account_last4, approval_status, approved_at) VALUES
-(1,  6,  'FAR-TS-001', 'Kudakuda',       'Chivvemla',   'Suryapet',            'Telangana', 4.50, 'Paddy / Rice (Grade-A)', '4821', 'APPROVED', CURRENT_TIMESTAMP),
-(2,  7,  'FAR-TS-002', 'Penpahad',       'Penpahad',    'Suryapet',            'Telangana', 3.00, 'Paddy / Rice (Common)',  '1192', 'APPROVED', CURRENT_TIMESTAMP),
-(3,  8,  'FAR-TS-003', 'Anantharam',     'Suryapet',    'Suryapet',            'Telangana', 5.00, 'Wheat (FAQ Standard)',   '8831', 'APPROVED', CURRENT_TIMESTAMP),
-(4,  9,  'FAR-TS-004', 'Dameracharla',   'Miryalaguda', 'Nalgonda',            'Telangana', 6.20, 'Paddy / Rice (Grade-A)', '7734', 'APPROVED', CURRENT_TIMESTAMP),
-(5,  10, 'FAR-TS-005', 'Tripuraram',     'Tripuraram',  'Nalgonda',            'Telangana', 8.00, 'Wheat (FAQ Standard)',   '9012', 'APPROVED', CURRENT_TIMESTAMP),
-(6,  11, 'FAR-TS-006', 'Gudur',          'Enumamula',   'Warangal',            'Telangana', 3.50, 'Maize (Yellow Corn)',    '3341', 'APPROVED', CURRENT_TIMESTAMP),
-(7,  12, 'FAR-TS-007', 'Atmakur',        'Atmakur',     'Warangal',            'Telangana', 4.00, 'Cotton (Medium Staple)', '2891', 'APPROVED', CURRENT_TIMESTAMP),
-(8,  13, 'FAR-TS-008', 'Sarapaka',       'Burgampahad', 'Bhadradri Kothagudem','Telangana', 2.50, 'Paddy / Rice (Common)',  '5521', 'APPROVED', CURRENT_TIMESTAMP),
-(9,  14, 'FAR-TS-009', 'Chivvemla',      'Chivvemla',   'Suryapet',            'Telangana', 3.80, 'Paddy / Rice (Grade-A)', '6612', 'APPROVED', CURRENT_TIMESTAMP),
-(10, 15, 'FAR-TS-010', 'Thallada',       'Thallada',    'Khammam',             'Telangana', 5.50, 'Maize (Yellow Corn)',    '1245', 'APPROVED', CURRENT_TIMESTAMP),
-(11, 16, 'FAR-TS-011', 'Tirumalagiri',   'Tirumalagiri','Suryapet',            'Telangana', 4.20, 'Paddy / Rice (Grade-A)', '9832', 'APPROVED', CURRENT_TIMESTAMP),
-(12, 17, 'FAR-TS-012', 'Mothey',         'Mothey',      'Suryapet',            'Telangana', 3.00, 'Paddy / Rice (Common)',  '4523', 'APPROVED', CURRENT_TIMESTAMP),
-(13, 18, 'FAR-TS-013', 'Garidepally',    'Garidepally', 'Suryapet',            'Telangana', 6.00, 'Paddy / Rice (Grade-A)', '7819', 'APPROVED', CURRENT_TIMESTAMP),
-(14, 19, 'FAR-TS-014', 'Nereducherla',   'Nereducherla','Suryapet',            'Telangana', 4.50, 'Wheat (FAQ Standard)',   '6634', 'APPROVED', CURRENT_TIMESTAMP),
-(15, 20, 'FAR-TS-015', 'Huzurnagar',     'Huzurnagar',  'Suryapet',            'Telangana', 7.00, 'Paddy / Rice (Grade-A)', '8812', 'APPROVED', CURRENT_TIMESTAMP),
-(16, 21, 'FAR-TS-016', 'Kodad',          'Kodad',       'Suryapet',            'Telangana', 5.20, 'Paddy / Rice (Grade-A)', '2234', 'APPROVED', CURRENT_TIMESTAMP),
-(17, 22, 'FAR-TS-017', 'Munagala',       'Munagala',    'Suryapet',            'Telangana', 3.40, 'Paddy / Rice (Common)',  '9081', 'APPROVED', CURRENT_TIMESTAMP),
-(18, 23, 'FAR-TS-018', 'Chilkur',        'Chilkur',     'Suryapet',            'Telangana', 4.80, 'Paddy / Rice (Grade-A)', '5543', 'APPROVED', CURRENT_TIMESTAMP),
-(19, 24, 'FAR-TS-019', 'Mellachervu',    'Mellachervu', 'Suryapet',            'Telangana', 6.50, 'Maize (Yellow Corn)',    '1123', 'APPROVED', CURRENT_TIMESTAMP),
-(20, 25, 'FAR-TS-020', 'Mattampally',    'Mattampally', 'Suryapet',            'Telangana', 3.20, 'Paddy / Rice (Grade-A)', '4490', 'APPROVED', CURRENT_TIMESTAMP),
-(21, 26, 'FAR-TS-021', 'Vemulapally',    'Vemulapally', 'Nalgonda',            'Telangana', 5.00, 'Paddy / Rice (Grade-A)', '7731', 'APPROVED', CURRENT_TIMESTAMP),
-(22, 27, 'FAR-TS-022', 'Miryalaguda Rural','Miryalaguda','Nalgonda',           'Telangana', 4.00, 'Paddy / Rice (Common)',  '3319', 'APPROVED', CURRENT_TIMESTAMP),
-(23, 28, 'FAR-TS-023', 'Rayanguda',      'Chivvemla',   'Suryapet',            'Telangana', 5.50, 'Paddy / Rice (Grade-A)', '9901', 'PENDING',  NULL),
-(24, 29, 'FAR-TS-024', 'Komativagu',     'Suryapet',    'Suryapet',            'Telangana', 3.75, 'Cotton (Medium Staple)', '8812', 'PENDING',  NULL);
+INSERT INTO farmers (id, user_id, farmer_code, village, mandal, district, state, land_size_acres, primary_crop, bank_account_last4, approval_status, approved_at, center_id) VALUES
+(1,  6,  'FAR-TS-001', 'Kudakuda',       'Chivvemla',   'Suryapet',            'Telangana', 4.50, 'Paddy / Rice (Grade-A)', '4821', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(2,  7,  'FAR-TS-002', 'Penpahad',       'Penpahad',    'Suryapet',            'Telangana', 3.00, 'Paddy / Rice (Common)',  '1192', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(3,  8,  'FAR-TS-003', 'Anantharam',     'Suryapet',    'Suryapet',            'Telangana', 5.00, 'Wheat (FAQ Standard)',   '8831', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(4,  9,  'FAR-TS-004', 'Dameracharla',   'Miryalaguda', 'Nalgonda',            'Telangana', 6.20, 'Paddy / Rice (Grade-A)', '7734', 'APPROVED', CURRENT_TIMESTAMP, 2),
+(5,  10, 'FAR-TS-005', 'Tripuraram',     'Tripuraram',  'Nalgonda',            'Telangana', 8.00, 'Wheat (FAQ Standard)',   '9012', 'APPROVED', CURRENT_TIMESTAMP, 2),
+(6,  11, 'FAR-TS-006', 'Gudur',          'Enumamula',   'Warangal',            'Telangana', 3.50, 'Maize (Yellow Corn)',    '3341', 'APPROVED', CURRENT_TIMESTAMP, 3),
+(7,  12, 'FAR-TS-007', 'Atmakur',        'Atmakur',     'Warangal',            'Telangana', 4.00, 'Cotton (Medium Staple)', '2891', 'APPROVED', CURRENT_TIMESTAMP, 3),
+(8,  13, 'FAR-TS-008', 'Sarapaka',       'Burgampahad', 'Bhadradri Kothagudem','Telangana', 2.50, 'Paddy / Rice (Common)',  '5521', 'APPROVED', CURRENT_TIMESTAMP, 4),
+(9,  14, 'FAR-TS-009', 'Chivvemla',      'Chivvemla',   'Suryapet',            'Telangana', 3.80, 'Paddy / Rice (Grade-A)', '6612', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(10, 15, 'FAR-TS-010', 'Thallada',       'Thallada',    'Khammam',             'Telangana', 5.50, 'Maize (Yellow Corn)',    '1245', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(11, 16, 'FAR-TS-011', 'Tirumalagiri',   'Tirumalagiri','Suryapet',            'Telangana', 4.20, 'Paddy / Rice (Grade-A)', '9832', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(12, 17, 'FAR-TS-012', 'Mothey',         'Mothey',      'Suryapet',            'Telangana', 3.00, 'Paddy / Rice (Common)',  '4523', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(13, 18, 'FAR-TS-013', 'Garidepally',    'Garidepally', 'Suryapet',            'Telangana', 6.00, 'Paddy / Rice (Grade-A)', '7819', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(14, 19, 'FAR-TS-014', 'Nereducherla',   'Nereducherla','Suryapet',            'Telangana', 4.50, 'Wheat (FAQ Standard)',   '6634', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(15, 20, 'FAR-TS-015', 'Huzurnagar',     'Huzurnagar',  'Suryapet',            'Telangana', 7.00, 'Paddy / Rice (Grade-A)', '8812', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(16, 21, 'FAR-TS-016', 'Kodad',          'Kodad',       'Suryapet',            'Telangana', 5.20, 'Paddy / Rice (Grade-A)', '2234', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(17, 22, 'FAR-TS-017', 'Munagala',       'Munagala',    'Suryapet',            'Telangana', 3.40, 'Paddy / Rice (Common)',  '9081', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(18, 23, 'FAR-TS-018', 'Chilkur',        'Chilkur',     'Suryapet',            'Telangana', 4.80, 'Paddy / Rice (Grade-A)', '5543', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(19, 24, 'FAR-TS-019', 'Mellachervu',    'Mellachervu', 'Suryapet',            'Telangana', 6.50, 'Maize (Yellow Corn)',    '1123', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(20, 25, 'FAR-TS-020', 'Mattampally',    'Mattampally', 'Suryapet',            'Telangana', 3.20, 'Paddy / Rice (Grade-A)', '4490', 'APPROVED', CURRENT_TIMESTAMP, 1),
+(21, 26, 'FAR-TS-021', 'Vemulapally',    'Vemulapally', 'Nalgonda',            'Telangana', 5.00, 'Paddy / Rice (Grade-A)', '7731', 'APPROVED', CURRENT_TIMESTAMP, 2),
+(22, 27, 'FAR-TS-022', 'Miryalaguda Rural','Miryalaguda','Nalgonda',           'Telangana', 4.00, 'Paddy / Rice (Common)',  '3319', 'APPROVED', CURRENT_TIMESTAMP, 2),
+(23, 28, 'FAR-TS-023', 'Rayanguda',      'Chivvemla',   'Suryapet',            'Telangana', 5.50, 'Paddy / Rice (Grade-A)', '9901', 'PENDING',  NULL, 1),
+(24, 29, 'FAR-TS-024', 'Komativagu',     'Suryapet',    'Suryapet',            'Telangana', 3.75, 'Cotton (Medium Staple)', '8812', 'PENDING',  NULL, 1);
 
 ALTER SEQUENCE farmers_id_seq RESTART WITH 25;
 
@@ -146,9 +146,12 @@ INSERT INTO time_slots (id, schedule_id, slot_name, start_time, end_time, max_to
 (4, 1, 'Afternoon Slot 2 (15:00 - 17:00)', '15:00:00', '17:00:00', 10, 2),
 -- Time slots for Schedule 2 (Center 2 today)
 (5, 2, 'Morning Slot 1 (08:00 - 10:30)', '08:00:00', '10:30:00', 12, 12),
-(6, 2, 'Morning Slot 2 (10:30 - 13:00)', '10:30:00', '13:00:00', 12, 6);
+(6, 2, 'Morning Slot 2 (10:30 - 13:00)', '10:30:00', '13:00:00', 12, 6),
+-- Time slots for Schedule 3 & 4 (Centers 3 and 4 today)
+(7, 3, 'Morning Slot 1 (09:00 - 12:00)', '09:00:00', '12:00:00', 10, 5),
+(8, 4, 'Morning Slot 1 (08:30 - 11:30)', '08:30:00', '11:30:00', 10, 5);
 
-ALTER SEQUENCE time_slots_id_seq RESTART WITH 7;
+ALTER SEQUENCE time_slots_id_seq RESTART WITH 9;
 
 -- -----------------------------------------------------------------------------
 -- 5. BOOKINGS & TOKENS (Center 1 Today)
@@ -186,9 +189,15 @@ INSERT INTO bookings (id, booking_ref, farmer_id, schedule_id, slot_id, commodit
 (22, 'BK-2026-0022', 2,  1, 3, 1, 25.00, 'TS-29-TC-5656', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day'),
 (23, 'BK-2026-0023', 1,  1, 3, 1, 45.00, 'TS-29-TC-6767', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day'), -- FARMER 1 TOKEN A023!
 (24, 'BK-2026-0024', 3,  1, 3, 1, 30.00, 'TS-29-TC-7878', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day'),
-(25, 'BK-2026-0025', 4,  1, 3, 1, 42.00, 'TS-29-TC-8989', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day');
+(25, 'BK-2026-0025', 4,  1, 3, 1, 42.00, 'TS-29-TC-8989', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day'),
+-- Bookings for Centers 2, 3, and 4
+(26, 'BK-2026-0026', 4,  2, 5, 1, 40.00, 'TS-05-AB-1234', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day'),
+(27, 'BK-2026-0027', 5,  2, 5, 1, 35.00, 'TS-05-AB-5678', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day'),
+(28, 'BK-2026-0028', 6,  3, 7, 4, 25.00, 'TS-03-CD-1122', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day'),
+(29, 'BK-2026-0029', 7,  3, 7, 4, 30.00, 'TS-03-CD-3344', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day'),
+(30, 'BK-2026-0030', 8,  4, 8, 1, 50.00, 'TS-04-EF-9988', 'CONFIRMED', CURRENT_DATE - INTERVAL '1 day');
 
-ALTER SEQUENCE bookings_id_seq RESTART WITH 26;
+ALTER SEQUENCE bookings_id_seq RESTART WITH 31;
 
 -- Tokens corresponding to bookings
 INSERT INTO tokens (id, token_number, booking_id, center_id, schedule_id, sequence_number, session_prefix, checksum, status, issued_at, called_at, completed_at) VALUES
@@ -218,11 +227,17 @@ INSERT INTO tokens (id, token_number, booking_id, center_id, schedule_id, sequen
 (22, 'A022', 22, 1, 1, 22, 'A', '4C', 'WAITING',   CURRENT_DATE + TIME '13:00:00', NULL, NULL),
 (23, 'A023', 23, 1, 1, 23, 'A', '3D', 'WAITING',   CURRENT_DATE + TIME '13:00:00', NULL, NULL), -- RAMESH KUMAR (farmer1)
 (24, 'A024', 24, 1, 1, 24, 'A', '2E', 'WAITING',   CURRENT_DATE + TIME '13:00:00', NULL, NULL),
-(25, 'A025', 25, 1, 1, 25, 'A', '1F', 'WAITING',   CURRENT_DATE + TIME '13:00:00', NULL, NULL);
+(25, 'A025', 25, 1, 1, 25, 'A', '1F', 'WAITING',   CURRENT_DATE + TIME '13:00:00', NULL, NULL),
+-- Tokens for Centers 2, 3, and 4
+(26, 'B001', 26, 2, 2, 1,  'B', '2B', 'WAITING',   CURRENT_DATE + TIME '08:30:00', NULL, NULL),
+(27, 'B002', 27, 2, 2, 2,  'B', '3C', 'WAITING',   CURRENT_DATE + TIME '08:30:00', NULL, NULL),
+(28, 'C001', 28, 3, 3, 1,  'C', '4D', 'WAITING',   CURRENT_DATE + TIME '09:00:00', NULL, NULL),
+(29, 'C002', 29, 3, 3, 2,  'C', '5E', 'WAITING',   CURRENT_DATE + TIME '09:00:00', NULL, NULL),
+(30, 'D001', 30, 4, 4, 1,  'D', '6F', 'WAITING',   CURRENT_DATE + TIME '08:30:00', NULL, NULL);
 
-ALTER SEQUENCE tokens_id_seq RESTART WITH 26;
+ALTER SEQUENCE tokens_id_seq RESTART WITH 31;
 
--- Queue entries for active center 1
+-- Queue entries for active centers
 INSERT INTO queue_entries (token_id, center_id, queue_position, priority_score, status) VALUES
 (18, 1, 1, 100.00, 'PROCESSING'),
 (19, 1, 2, 95.00,  'IN_QUEUE'),
@@ -231,7 +246,12 @@ INSERT INTO queue_entries (token_id, center_id, queue_position, priority_score, 
 (22, 1, 5, 80.00,  'IN_QUEUE'),
 (23, 1, 6, 75.00,  'IN_QUEUE'), -- farmer1 is 5 ahead after current
 (24, 1, 7, 70.00,  'IN_QUEUE'),
-(25, 1, 8, 65.00,  'IN_QUEUE');
+(25, 1, 8, 65.00,  'IN_QUEUE'),
+(26, 2, 1, 100.00, 'IN_QUEUE'),
+(27, 2, 2, 90.00,  'IN_QUEUE'),
+(28, 3, 1, 100.00, 'IN_QUEUE'),
+(29, 3, 2, 90.00,  'IN_QUEUE'),
+(30, 4, 1, 100.00, 'IN_QUEUE');
 
 -- -----------------------------------------------------------------------------
 -- 6. PROCUREMENT TRANSACTIONS (Completed for A001 to A017)

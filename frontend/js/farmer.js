@@ -241,6 +241,10 @@ async function loadActiveToken() {
             statusText = "TURN APPROACHING (NEXT 2 FARMERS)";
         } else if (t.status === "COMPLETED") {
             statusText = "PROCUREMENT COMPLETED";
+        } else if (t.status === "PAYMENT_FAILED") {
+            statusBadgeClass = "badge-danger pulse";
+            statusText = "DBT PAYMENT FAILED - PLEASE RETRY AT MANDI COUNTER";
+            heroClass = "hero-token-card alert-turn";
         }
 
         // Calculate visual progress percentage
@@ -565,7 +569,7 @@ async function loadHistory() {
                 <td><strong>${h.net_weight_qtl ? h.net_weight_qtl.toFixed(2) : '-'}</strong></td>
                 <td><strong style="color: var(--primary-color);">₹${h.final_amount ? h.final_amount.toLocaleString() : '-'}</strong></td>
                 <td>
-                    <span class="badge ${h.payment_status === 'DIRECT_BENEFIT_TRANSFER' ? 'badge-live' : 'badge-warning'}">
+                    <span class="badge ${h.payment_status === 'PAYMENT_FAILED' ? 'badge-danger' : (h.payment_status === 'DIRECT_BENEFIT_TRANSFER' || h.payment_status === 'SUCCESS' ? 'badge-live' : 'badge-warning')}">
                         ${h.payment_status}
                     </span>
                 </td>

@@ -261,10 +261,11 @@
                             <th>Operating Hours</th>
                             <th>Active Counters</th>
                             <th>Center Status</th>
+                            <th>Map Location</th>
                         </tr>
                     </thead>
                     <tbody id="public-centers-body">
-                        <tr><td colspan="6" style="text-align:center; padding: 20px;">Loading center feeds...</td></tr>
+                        <tr><td colspan="7" style="text-align:center; padding: 20px;">Loading center feeds...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -275,6 +276,31 @@
         <p>Smart India Hackathon 2026 • Problem Statement PS ID: 26032 • Digital Procurement Platform</p>
         <p style="margin-top: 4px; opacity: 0.8;">Integrated with C Micro-Engine (`libcqueue`), C++ Optimizer (`libcppqueue_opt`), PostgreSQL 16 & FastAPI</p>
     </footer>
+
+    <!-- Public Center Map Modal -->
+    <div class="modal-overlay" id="public-map-modal" style="display: none;">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="public-map-title" style="margin: 0; font-size: 1.2rem;">Center Map Location</h3>
+                    <p id="public-map-address" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.85rem;"></p>
+                </div>
+                <button class="btn-close" onclick="closePublicMapModal()">&times;</button>
+            </div>
+            <div style="width: 100%; height: 330px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); margin-bottom: 16px; background: #f8fafc;">
+                <iframe id="public-map-iframe" width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="" style="border:0;"></iframe>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <span id="public-map-coords" style="font-size: 0.82rem; font-family: monospace; color: var(--text-muted);"></span>
+                <div style="display: flex; gap: 8px;">
+                    <a id="public-map-gmaps-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="font-size: 0.85rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                        🗺️ Google Maps
+                    </a>
+                    <button type="button" onclick="closePublicMapModal()" class="btn btn-primary" style="font-size: 0.85rem; padding: 6px 14px;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/i18n.js?v=2.2.0"></script>
     <script src="/static/js/app.js?v=2.2.0"></script>
@@ -300,11 +326,40 @@
                                 ${c.status}
                             </span>
                         </td>
+                        <td>
+                            ${c.latitude && c.longitude ? `
+                                <button class="btn btn-sm btn-outline" onclick="openPublicMapModal('${encodeURIComponent(c.name)}', '${encodeURIComponent(c.address)}', ${c.latitude}, ${c.longitude})" style="padding: 4px 10px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    📍 View Map
+                                </button>
+                            ` : `
+                                <span style="color:#94a3b8; font-size:0.8rem;">No GPS</span>
+                            `}
+                        </td>
                     </tr>
                 `).join('');
             } catch (e) {
                 console.error("Failed to load public centers:", e);
             }
+        }
+
+        function openPublicMapModal(nameEncoded, addressEncoded, lat, lng) {
+            const name = decodeURIComponent(nameEncoded);
+            const address = decodeURIComponent(addressEncoded);
+            document.getElementById("public-map-title").textContent = name;
+            document.getElementById("public-map-address").textContent = address;
+            document.getElementById("public-map-coords").textContent = `GPS: ${Number(lat).toFixed(4)}° N, ${Number(lng).toFixed(4)}° E`;
+
+            const delta = 0.015;
+            const bbox = `${lng - delta}%2C${lat - delta}%2C${lng + delta}%2C${lat + delta}`;
+            document.getElementById("public-map-iframe").src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+            document.getElementById("public-map-gmaps-link").href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+            document.getElementById("public-map-modal").style.display = "flex";
+        }
+
+        function closePublicMapModal() {
+            document.getElementById("public-map-modal").style.display = "none";
+            document.getElementById("public-map-iframe").src = "";
         }
 
         // Handle Demo Login

@@ -430,3 +430,59 @@ def test_official_farmer_edit_and_persistence():
 
     # 5. Clean up
     client.delete(f"/api/official/farmers/{farmer_id}", headers=official_headers)
+
+
+def test_admin_farmers_center_filter_and_search():
+    """
+    Verify:
+    1. GET /api/admin/farmers returns populated center_id, center_name, and center_code.
+    2. GET /api/admin/farmers?center_id=1 filters strictly to Center 1 (Suryapet).
+    3. GET /api/admin/farmers?center_id=2 filters strictly to Center 2 (Miryalaguda).
+    4. GET /api/admin/farmers?search=Miryalaguda matches farmers by center name.
+    5. GET /api/admin/farmers?search=CPC-001 matches farmers by center code.
+    """
+    admin_headers = get_admin_headers()
+
+    # 1. Full list has center metadata populated
+    all_res = client.get("/api/admin/farmers", headers=admin_headers)
+    assert all_res.status_code == 200
+    all_farmers = all_res.json()
+    assert len(all_farmers) > 0
+
+    # Verify that center details are present and not all null
+    centers_present = [f for f in all_farmers if f.get("center_name") is not None]
+    assert len(centers_present) > 0, "Farmers should have center_name populated"
+
+    # 2. Filter by Center 1
+    c1_res = client.get("/api/admin/farmers?center_id=1", headers=admin_headers)
+    assert c1_res.status_code == 200
+    c1_farmers = c1_res.json()
+    assert len(c1_farmers) > 0
+    for f in c1_farmers:
+        assert f["center_id"] == 1
+        assert "Suryapet" in f["center_name"] or f["center_code"] == "CPC-001"
+
+    # 3. Filter by Center 2
+    c2_res = client.get("/api/admin/farmers?center_id=2", headers=admin_headers)
+    assert c2_res.status_code == 200
+    c2_farmers = c2_res.json()
+    assert len(c2_farmers) > 0
+    for f in c2_farmers:
+        assert f["center_id"] == 2
+        assert "Miryalaguda" in f["center_name"] or f["center_code"] == "RPC-002"
+
+    # 4. Search by Center Name "Miryalaguda"
+    search_res = client.get("/api/admin/farmers?search=Miryalaguda", headers=admin_headers)
+    assert search_res.status_code == 200
+    search_farmers = search_res.json()
+    assert len(search_farmers) > 0
+    for f in search_farmers:
+        assert "miryalaguda" in (f["center_name"] or "").lower() or "miryalaguda" in (f["district"] or "").lower()
+
+    # 5. Search by Center Code "CPC-001"
+    code_search_res = client.get("/api/admin/farmers?search=CPC-001", headers=admin_headers)
+    assert code_search_res.status_code == 200
+    code_farmers = code_search_res.json()
+    assert len(code_farmers) > 0
+    for f in code_farmers:
+        assert f["center_code"] == "CPC-001" or "suryapet" in (f["center_name"] or "").lower()

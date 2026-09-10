@@ -66,6 +66,8 @@ class CenterOut(BaseModel):
     avg_processing_seconds: int
     current_token_seq: int
     status: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -81,6 +83,25 @@ class CenterCreate(BaseModel):
     daily_capacity_mt: float = 100.0
     active_counters: int = 2
     avg_processing_seconds: int = 480
+    status: Optional[str] = "OPEN"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+class CenterUpdate(BaseModel):
+    center_code: Optional[str] = None
+    name: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    address: Optional[str] = None
+    contact_phone: Optional[str] = None
+    working_hours_start: Optional[str] = None
+    working_hours_end: Optional[str] = None
+    daily_capacity_mt: Optional[float] = None
+    active_counters: Optional[int] = None
+    avg_processing_seconds: Optional[int] = None
+    status: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class CenterStatusUpdate(BaseModel):
     status: str = Field(..., description="OPEN, IN PROGRESS, PAUSED, DELAYED, COMPLETED, CLOSED")
@@ -191,6 +212,14 @@ class CompleteTransactionRequest(BaseModel):
     tare_weight_qtl: float = 0.0
     moisture_content_pct: float
     quality_grade: str = "Grade-A"
+    payment_status: Optional[str] = "SUCCESS"  # SUCCESS, PAYMENT_FAILED
+    payment_method: Optional[str] = "RAZORPAY_DBT"
+    razorpay_payment_id: Optional[str] = None
+    razorpay_order_id: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+    upi_id: Optional[str] = None
+    failure_reason: Optional[str] = None
 
 class SkipTokenRequest(BaseModel):
     token_id: int
@@ -301,6 +330,7 @@ class FarmerCreateByOfficial(BaseModel):
     bank_account_last4: Optional[str] = "1234"
     bank_ifsc_code: Optional[str] = None
     bank_name: Optional[str] = None
+    center_id: Optional[int] = None
     profile_image: Optional[str] = None
 
 class FarmerUpdateByOfficial(BaseModel):
@@ -319,6 +349,7 @@ class FarmerUpdateByOfficial(BaseModel):
     bank_account_last4: Optional[str] = None
     bank_ifsc_code: Optional[str] = None
     bank_name: Optional[str] = None
+    center_id: Optional[int] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -343,6 +374,7 @@ class FarmerDetailOut(BaseModel):
     bank_account_last4: Optional[str] = None
     bank_ifsc_code: Optional[str] = None
     bank_name: Optional[str] = None
+    center_id: Optional[int] = None
     center_name: Optional[str] = None
     center_code: Optional[str] = None
     profile_image_url: Optional[str] = None

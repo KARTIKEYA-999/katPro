@@ -45,6 +45,8 @@ class ProcurementCenter(Base):
     avg_processing_seconds = Column(Integer, nullable=False, default=480)
     current_token_seq = Column(Integer, nullable=False, default=0)
     status = Column(String(32), nullable=False, default="OPEN", index=True) # OPEN, IN PROGRESS, PAUSED, DELAYED, COMPLETED, CLOSED
+    latitude = Column(Numeric(9, 6), nullable=True)
+    longitude = Column(Numeric(9, 6), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
     officials = relationship("Official", back_populates="center")
@@ -74,10 +76,12 @@ class Farmer(Base):
     approval_status = Column(String(32), nullable=False, default="PENDING", index=True) # PENDING, APPROVED, REJECTED
     approval_remarks = Column(Text, nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
+    center_id = Column(Integer, ForeignKey("procurement_centers.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
     user = relationship("User", back_populates="farmer_profile")
     bookings = relationship("Booking", back_populates="farmer", cascade="all, delete-orphan")
+    center = relationship("ProcurementCenter", foreign_keys=[center_id])
 
 
 class Official(Base):
@@ -237,7 +241,13 @@ class ProcurementTransaction(Base):
     quality_grade = Column(String(16), nullable=False, default="Grade-A")
     msp_rate = Column(Numeric(10, 2), nullable=False)
     final_amount = Column(Numeric(12, 2), nullable=False)
-    payment_status = Column(String(32), nullable=False, default="PROCESSED") # PENDING, PROCESSED, DIRECT_BENEFIT_TRANSFER
+    payment_status = Column(String(32), nullable=False, default="PROCESSED") # PENDING, PROCESSED, DIRECT_BENEFIT_TRANSFER, PAYMENT_FAILED, SUCCESS
+    payment_method = Column(String(32), nullable=True, default="RAZORPAY_DBT")
+    razorpay_payment_id = Column(String(64), nullable=True)
+    razorpay_order_id = Column(String(64), nullable=True)
+    bank_account_number = Column(String(64), nullable=True)
+    bank_ifsc = Column(String(32), nullable=True)
+    failure_reason = Column(Text, nullable=True)
     processed_by = Column(Integer, ForeignKey("officials.id"), nullable=True)
     processed_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 

@@ -65,6 +65,8 @@ CREATE TABLE procurement_centers (
     avg_processing_seconds INTEGER NOT NULL DEFAULT 480 CHECK (avg_processing_seconds >= 60),
     current_token_seq INTEGER NOT NULL DEFAULT 0,
     status VARCHAR(32) NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'IN PROGRESS', 'PAUSED', 'DELAYED', 'COMPLETED', 'CLOSED')),
+    latitude NUMERIC(9, 6),
+    longitude NUMERIC(9, 6),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -93,11 +95,13 @@ CREATE TABLE farmers (
     approval_status VARCHAR(32) NOT NULL DEFAULT 'PENDING' CHECK (approval_status IN ('PENDING', 'APPROVED', 'REJECTED')),
     approval_remarks TEXT,
     approved_at TIMESTAMP WITH TIME ZONE,
+    center_id INTEGER REFERENCES procurement_centers(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_farmers_district ON farmers(district);
 CREATE INDEX idx_farmers_approval_status ON farmers(approval_status);
+CREATE INDEX idx_farmers_center_id ON farmers(center_id);
 
 -- -----------------------------------------------------------------------------
 -- 4. OFFICIALS PROFILE TABLE
@@ -197,7 +201,7 @@ CREATE TABLE bookings (
     commodity_id INTEGER NOT NULL REFERENCES commodities(id) ON DELETE CASCADE,
     estimated_quantity_quintals NUMERIC(8, 2) NOT NULL CHECK (estimated_quantity_quintals > 0),
     vehicle_number VARCHAR(32),
-    status VARCHAR(32) NOT NULL DEFAULT 'CONFIRMED' CHECK (status IN ('CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW')),
+    status VARCHAR(32) NOT NULL DEFAULT 'CONFIRMED' CHECK (status IN ('CONFIRMED', 'CHECKED_IN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW', 'PAYMENT_FAILED')),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -207,18 +211,18 @@ CREATE INDEX idx_bookings_schedule ON bookings(schedule_id);
 CREATE INDEX idx_bookings_status ON bookings(status);
 
 -- -----------------------------------------------------------------------------
--- 11. TOKENS TABLE (Generated with C module assistance)
+-- 11. DIGITAL TOKENS TABLE (C Acceleration Engine & Queues)
 -- -----------------------------------------------------------------------------
 CREATE TABLE tokens (
     id SERIAL PRIMARY KEY,
-    token_number VARCHAR(16) NOT NULL, -- e.g. "A023"
+    token_number VARCHAR(16) NOT NULL,
     booking_id INTEGER NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
     center_id INTEGER NOT NULL REFERENCES procurement_centers(id) ON DELETE CASCADE,
     schedule_id INTEGER NOT NULL REFERENCES procurement_schedules(id) ON DELETE CASCADE,
     sequence_number INTEGER NOT NULL CHECK (sequence_number > 0),
     session_prefix CHAR(1) NOT NULL DEFAULT 'A',
     checksum VARCHAR(8),
-    status VARCHAR(32) NOT NULL DEFAULT 'WAITING' CHECK (status IN ('WAITING', 'CALLED', 'PROCESSING', 'COMPLETED', 'SKIPPED', 'CANCELLED')),
+    status VARCHAR(32) NOT NULL DEFAULT 'WAITING' CHECK (status IN ('WAITING', 'CALLED', 'PROCESSING', 'COMPLETED', 'SKIPPED', 'CANCELLED', 'PAYMENT_FAILED')),
     issued_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     called_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
@@ -259,7 +263,13 @@ CREATE TABLE procurement_transactions (
     quality_grade VARCHAR(16) NOT NULL DEFAULT 'Grade-A' CHECK (quality_grade IN ('Grade-A', 'Grade-B', 'FAQ', 'Rejected')),
     msp_rate NUMERIC(10, 2) NOT NULL CHECK (msp_rate > 0),
     final_amount NUMERIC(12, 2) NOT NULL CHECK (final_amount >= 0),
-    payment_status VARCHAR(32) NOT NULL DEFAULT 'PROCESSED' CHECK (payment_status IN ('PENDING', 'PROCESSED', 'DIRECT_BENEFIT_TRANSFER')),
+    payment_status VARCHAR(32) NOT NULL DEFAULT 'PROCESSED' CHECK (payment_status IN ('PENDING', 'PROCESSED', 'DIRECT_BENEFIT_TRANSFER', 'PAYMENT_FAILED', 'SUCCESS')),
+    payment_method VARCHAR(32) DEFAULT 'RAZORPAY_DBT',
+    razorpay_payment_id VARCHAR(64),
+    razorpay_order_id VARCHAR(64),
+    bank_account_number VARCHAR(64),
+    bank_ifsc VARCHAR(32),
+    failure_reason TEXT,
     processed_by INTEGER REFERENCES officials(id),
     processed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -275,7 +285,7 @@ CREATE TABLE notifications (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(128) NOT NULL,
     message TEXT NOT NULL,
-    notification_type VARCHAR(32) NOT NULL DEFAULT 'INFO' CHECK (notification_type IN ('INFO', 'TURN_ALERT', 'SCHEDULE', 'DELAY', 'SUCCESS', 'APPROVAL', 'REJECTION')),
+    notification_type VARCHAR(32) NOT NULL DEFAULT 'INFO' CHECK (notification_type IN ('INFO', 'TURN_ALERT', 'SCHEDULE', 'DELAY', 'SUCCESS', 'APPROVAL', 'REJECTION', 'ALERT', 'PAYMENT_FAILED')),
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

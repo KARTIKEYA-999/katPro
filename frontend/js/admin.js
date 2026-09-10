@@ -174,6 +174,8 @@ async function loadCentersTable() {
     try {
         const centers = await App.fetch("/api/admin/centers");
         adminCenters = centers;
+        const tabBadgeCenters = document.getElementById("tab-badge-centers");
+        if (tabBadgeCenters) tabBadgeCenters.textContent = centers.length;
         const tbody = document.getElementById("admin-centers-body");
         if (tbody) {
             tbody.innerHTML = centers.map(c => `
@@ -184,7 +186,22 @@ async function loadCentersTable() {
                     <td>${c.active_counters} Counters</td>
                     <td>${c.daily_capacity_mt} MT</td>
                     <td><span class="badge badge-live">${c.current_token_seq > 0 ? 'A' + String(c.current_token_seq).padStart(3, '0') : 'None'}</span></td>
-                    <td><span class="badge ${c.status === 'OPEN' ? 'badge-live' : 'badge-warning'}">${c.status}</span></td>
+                    <td><span class="badge ${c.status === 'OPEN' || c.status === 'IN PROGRESS' ? 'badge-live' : (c.status === 'CLOSED' ? 'badge-danger' : 'badge-warning')}">${c.status}</span></td>
+                    <td>
+                        ${c.latitude && c.longitude ? `
+                            <button class="btn btn-sm btn-outline" onclick="openAdminCenterMapModal(${c.id})" style="padding: 4px 8px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                📍 Map
+                            </button>
+                        ` : `
+                            <span style="color:#94a3b8; font-size:0.8rem;">No GPS</span>
+                        `}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-sm btn-primary" onclick="openAdminEditCenterModal(${c.id})" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">✏️ Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteAdminCenter(${c.id})" style="padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">🗑️ Delete</button>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
         }
@@ -196,6 +213,15 @@ async function loadCentersTable() {
             schedCenterFilter.innerHTML = `<option value="">All Procurement Centers (${centers.length})</option>` +
                 centers.map(c => `<option value="${c.id}">${c.name} (${c.district})</option>`).join('');
             if (currentVal) schedCenterFilter.value = currentVal;
+        }
+
+        // Populate Center filter in Farmer Approval & Registry Queue
+        const farmerCenterFilter = document.getElementById("admin-farmer-center-filter");
+        if (farmerCenterFilter) {
+            const currentVal = farmerCenterFilter.value;
+            farmerCenterFilter.innerHTML = `<option value="">🏢 All Registered Centers (${centers.length})</option>` +
+                centers.map(c => `<option value="${c.id}">🏢 ${c.name} (${c.center_code || c.district})</option>`).join('');
+            if (currentVal) farmerCenterFilter.value = currentVal;
         }
 
         // Populate Center dropdown in Create Schedule Modal
@@ -312,6 +338,11 @@ function openAdminCreateScheduleModal() {
     const modal = document.getElementById("admin-create-schedule-modal");
     if (!modal) return;
 
+    // Ensure centers dropdown is populated
+    if (!adminCenters || adminCenters.length === 0) {
+        loadCentersTable();
+    }
+
     // Default date to tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -377,7 +408,8 @@ function openAdminEditScheduleModal(scheduleId) {
     }
 
     document.getElementById("admin-edit-schedule-id").value = sched.id;
-    document.getElementById("admin-edit-center-name").textContent = sched.center_name || `Center #${sched.center_id}`;
+    const schedCenterSpan = document.getElementById("admin-edit-sched-center-name") || document.getElementById("admin-edit-center-name");
+    if (schedCenterSpan) schedCenterSpan.textContent = sched.center_name || `Center #${sched.center_id}`;
     document.getElementById("admin-edit-commodity-name").textContent = sched.commodity_name || "General";
     document.getElementById("admin-edit-date").value = sched.schedule_date;
     document.getElementById("admin-edit-start").value = sched.start_time ? sched.start_time.slice(0, 5) : "09:00";
@@ -560,7 +592,7 @@ function filterAdminOfficialsTable() {
 }
 
 function switchAdminTab(tabName) {
-    const tabs = ["analytics", "officials", "approvals", "users"];
+    const tabs = ["analytics", "centers", "officials", "approvals", "users"];
     tabs.forEach(t => {
         const btn = document.getElementById(`btn-tab-${t}`);
         const pane = document.getElementById(`tab-pane-${t}`);
@@ -580,7 +612,10 @@ function switchAdminTab(tabName) {
         window.history.replaceState(null, null, url.toString());
     } catch (e) {}
 
-    if (tabName === "officials") {
+    if (tabName === "centers") {
+        loadCentersTable();
+        loadAdminSchedules();
+    } else if (tabName === "officials") {
         loadAdminOfficials();
     } else if (tabName === "approvals") {
         loadAdminFarmers();
@@ -730,6 +765,7 @@ async function deleteAdminOfficial(officialId, username) {
 // 10. Farmer Approval Queue & Registry
 async function loadAdminFarmers() {
     const statusFilter = document.getElementById("admin-farmer-approval-filter") ? document.getElementById("admin-farmer-approval-filter").value : "ALL";
+    const centerFilter = document.getElementById("admin-farmer-center-filter") ? document.getElementById("admin-farmer-center-filter").value : "";
     const tbody = document.getElementById("admin-farmers-body");
     if (!adminFarmers || adminFarmers.length === 0) {
         if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px;">Loading farmer registry...</td></tr>`;
@@ -738,7 +774,12 @@ async function loadAdminFarmers() {
     }
 
     try {
-        const url = `/api/admin/farmers${statusFilter && statusFilter !== 'ALL' ? `?approval_status=${statusFilter}` : ''}`;
+        let params = [];
+        if (statusFilter && statusFilter !== 'ALL') params.push(`approval_status=${encodeURIComponent(statusFilter)}`);
+        if (centerFilter) params.push(`center_id=${encodeURIComponent(centerFilter)}`);
+        const qStr = params.length > 0 ? `?${params.join('&')}` : '';
+
+        const url = `/api/admin/farmers${qStr}`;
         const farmers = await App.fetch(url);
         adminFarmers = farmers;
 
@@ -746,7 +787,8 @@ async function loadAdminFarmers() {
         let pendingCount = farmers.filter(f => f.approval_status === "PENDING").length;
         if (statusFilter !== "PENDING" && statusFilter !== "ALL") {
             try {
-                const pendingList = await App.fetch("/api/admin/farmers?approval_status=PENDING");
+                const pendingUrl = centerFilter ? `/api/admin/farmers?approval_status=PENDING&center_id=${encodeURIComponent(centerFilter)}` : "/api/admin/farmers?approval_status=PENDING";
+                const pendingList = await App.fetch(pendingUrl);
                 pendingCount = pendingList.length;
             } catch (e) {}
         }
@@ -760,6 +802,15 @@ async function loadAdminFarmers() {
         if (tabBadge) {
             tabBadge.textContent = `${pendingCount} Pending`;
             tabBadge.className = pendingCount > 0 ? "tab-badge badge-pending" : "tab-badge";
+        }
+
+        // Ensure center dropdown in header is populated if centers exist
+        const farmerCenterFilter = document.getElementById("admin-farmer-center-filter");
+        if (farmerCenterFilter && (!farmerCenterFilter.children || farmerCenterFilter.children.length <= 1) && adminCenters && adminCenters.length > 0) {
+            const currentVal = farmerCenterFilter.value;
+            farmerCenterFilter.innerHTML = `<option value="">🏢 All Registered Centers (${adminCenters.length})</option>` +
+                adminCenters.map(c => `<option value="${c.id}">🏢 ${c.name} (${c.center_code || c.district})</option>`).join('');
+            if (currentVal) farmerCenterFilter.value = currentVal;
         }
 
         renderAdminFarmersTable(farmers);
@@ -785,14 +836,21 @@ function renderAdminFarmersTable(farmers) {
         if (f.approval_status === "PENDING") statusBadge = "badge-warning";
         else if (f.approval_status === "REJECTED") statusBadge = "badge-danger";
 
+        const acres = f.land_area_acres != null ? f.land_area_acres : (f.land_size_acres != null ? f.land_size_acres : 0);
+
         return `
             <tr>
                 <td><strong style="color: var(--primary-color);">${escapeHtml(f.farmer_code)}</strong></td>
                 <td><strong>${escapeHtml(f.full_name)}</strong><br><small style="color: var(--text-muted);">Crop: ${escapeHtml(f.primary_crop || '-')}</small></td>
                 <td>📞 ${escapeHtml(f.phone)}<br><small style="color: var(--text-muted);">Aadhaar: ${escapeHtml(f.aadhaar_number || '-')}</small></td>
                 <td>${escapeHtml(f.village)}, ${escapeHtml(f.district)}<br><small style="color: var(--text-muted);">${escapeHtml(f.mandal || '')}</small></td>
-                <td><strong>${f.land_area_acres}</strong> Acres<br><small style="color: var(--text-muted);">PB: ${escapeHtml(f.passbook_number || '-')}</small></td>
-                <td>${escapeHtml(f.center_name || 'Not assigned')}<br><small style="color: var(--text-muted);">${f.center_code || ''}</small></td>
+                <td><strong>${acres}</strong> Acres<br><small style="color: var(--text-muted);">PB: ${escapeHtml(f.passbook_number || '-')}</small></td>
+                <td>
+                    <div style="font-weight: 600; color: #166534; display: flex; align-items: center; gap: 4px;">
+                        🏢 <span>${escapeHtml(f.center_name || 'Not assigned')}</span>
+                    </div>
+                    ${f.center_code ? `<span class="badge" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 0.72rem; margin-top: 3px; display: inline-block;">${escapeHtml(f.center_code)}</span>` : ''}
+                </td>
                 <td>
                     <span class="badge ${statusBadge}">${f.approval_status}</span>
                     ${f.approval_status === 'REJECTED' && f.approval_remarks ? `
@@ -832,14 +890,32 @@ function renderAdminFarmersTable(farmers) {
 }
 
 function filterAdminFarmersTable() {
-    const q = (document.getElementById("admin-farmer-search").value || "").toLowerCase();
-    const filtered = adminFarmers.filter(f =>
-        f.full_name.toLowerCase().includes(q) ||
-        f.farmer_code.toLowerCase().includes(q) ||
-        (f.phone && f.phone.includes(q)) ||
-        (f.village && f.village.toLowerCase().includes(q)) ||
-        (f.district && f.district.toLowerCase().includes(q))
-    );
+    const q = (document.getElementById("admin-farmer-search").value || "").toLowerCase().trim();
+    const centerFilter = document.getElementById("admin-farmer-center-filter") ? document.getElementById("admin-farmer-center-filter").value : "";
+    const statusFilter = document.getElementById("admin-farmer-approval-filter") ? document.getElementById("admin-farmer-approval-filter").value : "ALL";
+
+    const filtered = adminFarmers.filter(f => {
+        // Filter by registered center id
+        const matchesCenter = !centerFilter || (String(f.center_id) === String(centerFilter));
+
+        // Filter by approval status
+        const matchesStatus = !statusFilter || statusFilter === "ALL" || f.approval_status === statusFilter;
+
+        // Search text matching: name, farmer_code, phone, village, district, mandal, center_name, center_code, primary_crop
+        const matchesSearch = !q || (
+            (f.full_name && f.full_name.toLowerCase().includes(q)) ||
+            (f.farmer_code && f.farmer_code.toLowerCase().includes(q)) ||
+            (f.phone && f.phone.includes(q)) ||
+            (f.village && f.village.toLowerCase().includes(q)) ||
+            (f.district && f.district.toLowerCase().includes(q)) ||
+            (f.mandal && f.mandal.toLowerCase().includes(q)) ||
+            (f.center_name && f.center_name.toLowerCase().includes(q)) ||
+            (f.center_code && f.center_code.toLowerCase().includes(q)) ||
+            (f.primary_crop && f.primary_crop.toLowerCase().includes(q))
+        );
+
+        return matchesCenter && matchesStatus && matchesSearch;
+    });
     renderAdminFarmersTable(filtered);
 }
 
@@ -908,7 +984,7 @@ async function initAdminPortal() {
     try {
         const params = new URLSearchParams(window.location.search);
         const tabParam = params.get("tab") || (window.location.hash ? window.location.hash.replace("#", "") : "");
-        if (tabParam && ["analytics", "officials", "approvals", "users"].includes(tabParam)) {
+        if (tabParam && ["analytics", "centers", "officials", "approvals", "users"].includes(tabParam)) {
             switchAdminTab(tabParam);
         }
     } catch (e) {}
@@ -952,4 +1028,174 @@ window.filterAdminFarmers = filterAdminFarmersTable;
 window.filterAdminOfficialsTable = filterAdminOfficialsTable;
 window.filterAdminOfficials = filterAdminOfficialsTable;
 window.toggleUserStatus = toggleUserStatus;
+
+// --- ADMIN PROCUREMENT CENTER CRUD & MAP MODALS ---
+function openAdminCreateCenterModal() {
+    const form = document.getElementById("admin-create-center-form");
+    if (form) form.reset();
+    document.getElementById("admin-new-center-start").value = "08:30";
+    document.getElementById("admin-new-center-end").value = "17:30";
+    document.getElementById("admin-new-center-capacity").value = "100.0";
+    document.getElementById("admin-new-center-counters").value = "2";
+    document.getElementById("admin-new-center-proctime").value = "480";
+    document.getElementById("admin-new-center-state").value = "Telangana";
+    document.getElementById("admin-new-center-status").value = "OPEN";
+    document.getElementById("admin-create-center-modal").style.display = "flex";
+}
+
+function closeAdminCreateCenterModal() {
+    document.getElementById("admin-create-center-modal").style.display = "none";
+}
+
+async function handleAdminCreateCenter(event) {
+    event.preventDefault();
+    const latVal = document.getElementById("admin-new-center-lat").value;
+    const lngVal = document.getElementById("admin-new-center-lng").value;
+    const payload = {
+        center_code: document.getElementById("admin-new-center-code").value.trim(),
+        name: document.getElementById("admin-new-center-name").value.trim(),
+        district: document.getElementById("admin-new-center-district").value.trim(),
+        state: document.getElementById("admin-new-center-state").value.trim() || "Telangana",
+        address: document.getElementById("admin-new-center-address").value.trim(),
+        contact_phone: document.getElementById("admin-new-center-phone").value.trim(),
+        working_hours_start: document.getElementById("admin-new-center-start").value || "08:30:00",
+        working_hours_end: document.getElementById("admin-new-center-end").value || "17:30:00",
+        daily_capacity_mt: parseFloat(document.getElementById("admin-new-center-capacity").value) || 100.0,
+        active_counters: parseInt(document.getElementById("admin-new-center-counters").value) || 2,
+        avg_processing_seconds: parseInt(document.getElementById("admin-new-center-proctime").value) || 480,
+        status: document.getElementById("admin-new-center-status").value || "OPEN",
+        latitude: latVal ? parseFloat(latVal) : null,
+        longitude: lngVal ? parseFloat(lngVal) : null
+    };
+
+    try {
+        await App.fetch("/api/admin/centers", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        App.showToast(`Procurement Center '${payload.name}' created successfully!`, "success");
+        closeAdminCreateCenterModal();
+        await loadCentersTable();
+    } catch (err) {
+        App.showToast(err.message || "Failed to create center", "alert");
+    }
+}
+
+function openAdminEditCenterModal(centerId) {
+    const center = adminCenters.find(c => c.id === centerId);
+    if (!center) {
+        App.showToast("Center not found", "alert");
+        return;
+    }
+    document.getElementById("admin-edit-center-id").value = center.id;
+    document.getElementById("admin-edit-center-code").value = center.center_code;
+    document.getElementById("admin-edit-center-name").value = center.name;
+    document.getElementById("admin-edit-center-district").value = center.district;
+    document.getElementById("admin-edit-center-state").value = center.state;
+    document.getElementById("admin-edit-center-address").value = center.address;
+    document.getElementById("admin-edit-center-phone").value = center.contact_phone;
+    document.getElementById("admin-edit-center-start").value = (center.working_hours_start || "08:30").slice(0, 5);
+    document.getElementById("admin-edit-center-end").value = (center.working_hours_end || "17:30").slice(0, 5);
+    document.getElementById("admin-edit-center-capacity").value = center.daily_capacity_mt;
+    document.getElementById("admin-edit-center-counters").value = center.active_counters;
+    document.getElementById("admin-edit-center-proctime").value = center.avg_processing_seconds;
+    document.getElementById("admin-edit-center-status").value = center.status || "OPEN";
+    document.getElementById("admin-edit-center-lat").value = center.latitude !== null && center.latitude !== undefined ? center.latitude : "";
+    document.getElementById("admin-edit-center-lng").value = center.longitude !== null && center.longitude !== undefined ? center.longitude : "";
+    
+    document.getElementById("admin-edit-center-modal").style.display = "flex";
+}
+
+function closeAdminEditCenterModal() {
+    document.getElementById("admin-edit-center-modal").style.display = "none";
+}
+
+async function handleAdminUpdateCenter(event) {
+    event.preventDefault();
+    const centerId = document.getElementById("admin-edit-center-id").value;
+    const latVal = document.getElementById("admin-edit-center-lat").value;
+    const lngVal = document.getElementById("admin-edit-center-lng").value;
+    const payload = {
+        center_code: document.getElementById("admin-edit-center-code").value.trim(),
+        name: document.getElementById("admin-edit-center-name").value.trim(),
+        district: document.getElementById("admin-edit-center-district").value.trim(),
+        state: document.getElementById("admin-edit-center-state").value.trim() || "Telangana",
+        address: document.getElementById("admin-edit-center-address").value.trim(),
+        contact_phone: document.getElementById("admin-edit-center-phone").value.trim(),
+        working_hours_start: document.getElementById("admin-edit-center-start").value || "08:30:00",
+        working_hours_end: document.getElementById("admin-edit-center-end").value || "17:30:00",
+        daily_capacity_mt: parseFloat(document.getElementById("admin-edit-center-capacity").value),
+        active_counters: parseInt(document.getElementById("admin-edit-center-counters").value),
+        avg_processing_seconds: parseInt(document.getElementById("admin-edit-center-proctime").value),
+        status: document.getElementById("admin-edit-center-status").value,
+        latitude: latVal ? parseFloat(latVal) : null,
+        longitude: lngVal ? parseFloat(lngVal) : null
+    };
+
+    try {
+        await App.fetch(`/api/admin/centers/${centerId}`, {
+            method: "PUT",
+            body: JSON.stringify(payload)
+        });
+        App.showToast("Procurement Center updated successfully!", "success");
+        closeAdminEditCenterModal();
+        await loadCentersTable();
+    } catch (err) {
+        App.showToast(err.message || "Failed to update center", "alert");
+    }
+}
+
+async function deleteAdminCenter(centerId) {
+    const center = adminCenters.find(c => c.id === centerId);
+    const centerName = center ? center.name : `Center #${centerId}`;
+    if (!confirm(`Are you sure you want to delete or decommission "${centerName}"?\n\nIf it has historical procurement transactions, it will be safely marked as CLOSED to preserve audit records.`)) {
+        return;
+    }
+
+    try {
+        const res = await App.fetch(`/api/admin/centers/${centerId}`, {
+            method: "DELETE"
+        });
+        App.showToast(res.message || "Operation completed successfully", "success");
+        await loadCentersTable();
+    } catch (err) {
+        App.showToast(err.message || "Failed to delete center", "alert");
+    }
+}
+
+function openAdminCenterMapModal(centerId) {
+    const center = adminCenters.find(c => c.id === centerId);
+    if (!center || !center.latitude || !center.longitude) {
+        App.showToast("GPS coordinates not configured for this center", "alert");
+        return;
+    }
+    const lat = center.latitude;
+    const lng = center.longitude;
+    document.getElementById("admin-map-title").textContent = center.name;
+    document.getElementById("admin-map-address").textContent = `${center.center_code} • ${center.address}`;
+    document.getElementById("admin-map-coords").textContent = `GPS: ${Number(lat).toFixed(4)}° N, ${Number(lng).toFixed(4)}° E`;
+
+    const delta = 0.015;
+    const bbox = `${lng - delta}%2C${lat - delta}%2C${lng + delta}%2C${lat + delta}`;
+    document.getElementById("admin-map-iframe").src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+    document.getElementById("admin-map-gmaps-link").href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+    document.getElementById("admin-center-map-modal").style.display = "flex";
+}
+
+function closeAdminCenterMapModal() {
+    document.getElementById("admin-center-map-modal").style.display = "none";
+    document.getElementById("admin-map-iframe").src = "";
+}
+
+window.openAdminCreateCenterModal = openAdminCreateCenterModal;
+window.closeAdminCreateCenterModal = closeAdminCreateCenterModal;
+window.handleAdminCreateCenter = handleAdminCreateCenter;
+window.openAdminEditCenterModal = openAdminEditCenterModal;
+window.closeAdminEditCenterModal = closeAdminEditCenterModal;
+window.handleAdminUpdateCenter = handleAdminUpdateCenter;
+window.deleteAdminCenter = deleteAdminCenter;
+window.openAdminCenterMapModal = openAdminCenterMapModal;
+window.closeAdminCenterMapModal = closeAdminCenterMapModal;
+
 

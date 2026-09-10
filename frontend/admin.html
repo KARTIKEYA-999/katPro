@@ -50,7 +50,11 @@
         <!-- ADMIN TOP NAVIGATION TABS -->
         <div class="portal-tabs-bar">
             <button class="portal-tab-btn active" id="btn-tab-analytics" onclick="switchAdminTab('analytics')">
-                <span>📊 Analytics & Schedules</span>
+                <span>📊 Analytics & Overview</span>
+            </button>
+            <button class="portal-tab-btn" id="btn-tab-centers" onclick="switchAdminTab('centers')">
+                <span>🏢 Add New Center</span>
+                <span class="tab-badge" id="tab-badge-centers">0</span>
             </button>
             <button class="portal-tab-btn" id="btn-tab-officials" onclick="switchAdminTab('officials')">
                 <span>🏛️ Central Office Users</span>
@@ -64,8 +68,11 @@
                 <span>👥 All System Users</span>
             </button>
             <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-                <button class="btn btn-primary" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openAdminCreateOfficialModal()">
-                    ➕ Add Central Office User
+                <button class="btn btn-primary" style="padding: 8px 14px; font-size: 0.85rem;" onclick="openAdminCreateCenterModal()">
+                    ➕ Add Center
+                </button>
+                <button class="btn btn-outline" style="padding: 8px 14px; font-size: 0.85rem; background: white;" onclick="openAdminCreateScheduleModal()">
+                    📅 Create Schedule
                 </button>
             </div>
         </div>
@@ -80,10 +87,10 @@
                     <small style="color: var(--text-muted);">Aadhaar Verified</small>
                 </div>
 
-                <div class="stat-box" style="border-top: 4px solid var(--accent-gold);">
+                <div class="stat-box" style="border-top: 4px solid var(--accent-gold); cursor: pointer;" onclick="switchAdminTab('centers')" title="Click to view & add procurement centers">
                     <div class="stat-label" data-i18n="kpi_centers">PROCUREMENT CENTERS</div>
                     <div class="stat-value" id="admin-stat-centers">0</div>
-                    <small style="color: var(--text-muted);">Across 4 Districts</small>
+                    <small style="color: var(--primary-color); font-weight: 600;">Manage & Add Centers ➔</small>
                 </div>
 
                 <div class="stat-box" style="border-top: 4px solid #16a34a;">
@@ -178,77 +185,115 @@
                 </div>
             </div>
         </div>
-
-        <!-- 4. PROCUREMENT CENTERS MANAGEMENT -->
-        <div class="card">
-            <div class="card-header">
-                <h2>🏢 <span data-i18n="center_management">Procurement Center Directory</span></h2>
-                <span class="badge badge-live">Live Monitored</span>
-            </div>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Center Code</th>
-                            <th>Center Name</th>
-                            <th>District</th>
-                            <th>Counters</th>
-                            <th>Daily Cap (MT)</th>
-                            <th>Current Token</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-centers-body">
-                        <tr><td colspan="7" style="text-align: center; padding: 20px;">Loading centers...</td></tr>
-                    </tbody>
-                </table>
-            </div>
         </div>
+        <!-- END TAB 1: ANALYTICS -->
 
-        <!-- 5. STATEWIDE PROCUREMENT SCHEDULES & CAPACITY MANAGEMENT (ADMIN ONLY) -->
-        <div class="card" style="border-top: 4px solid var(--accent-gold);">
-            <div class="card-header">
-                <div>
-                    <h2>📅 Statewide Procurement Schedules & Capacity Management</h2>
-                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 2px;">
-                        Statewide Administration: Configure daily intake quotas, time slots, and manage procurement schedules across all mandis.
-                    </p>
-                </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                    <select id="admin-sched-center-filter" class="form-control" style="width: auto; min-height: 38px;" onchange="loadAdminSchedules()">
-                        <option value="">All Procurement Centers</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="openAdminCreateScheduleModal()">
-                        <span>➕ Create New Schedule</span>
-                    </button>
-                    <button class="btn btn-outline" style="padding: 6px 14px; min-height: 38px;" onclick="loadAdminSchedules()">
-                        🔄 Refresh
-                    </button>
+        <!-- TAB: ADD NEW CENTER & SCHEDULES MANAGEMENT -->
+        <div id="tab-pane-centers" class="portal-tab-content">
+            <!-- QUICK PROVISIONING HERO CARD -->
+            <div class="card" style="border-top: 4px solid var(--primary-color); background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                    <div>
+                        <h2 style="margin: 0; color: #166534; display: flex; align-items: center; gap: 8px;">
+                            🏢 <span>Procurement Centers & Scheduling Management</span>
+                        </h2>
+                        <p style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.88rem;">
+                            Provision regional procurement centers, configure GPS map locations, and manage procurement schedules & daily intake capacity.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="openAdminCreateCenterModal()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 9px 16px; cursor: pointer;">
+                            ➕ Add New Center
+                        </button>
+                        <button class="btn btn-outline" onclick="openAdminCreateScheduleModal()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 9px 16px; background: white; cursor: pointer;">
+                            📅 Create New Schedule
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="table-wrapper">
-                <table id="admin-schedules-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Procurement Center</th>
-                            <th>Commodity</th>
-                            <th>Operating Hours</th>
-                            <th>Capacity (Booked / Total)</th>
-                            <th>Slots</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-schedules-body">
-                        <tr><td colspan="8" style="text-align: center; padding: 20px;">Loading statewide schedules...</td></tr>
-                    </tbody>
-                </table>
+            <!-- 1. PROCUREMENT CENTERS DIRECTORY -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>🏢 <span data-i18n="center_management">Procurement Center Directory</span></h2>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 2px 0 0 0;">
+                            Manage regional APMC mandis, update capacity & operating parameters, view GPS map locations, and provision new centers.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span class="badge badge-live">Live Monitored</span>
+                        <button class="btn btn-primary" onclick="openAdminCreateCenterModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; padding: 8px 14px; cursor: pointer;">
+                            ➕ Add New Center
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Center Code</th>
+                                <th>Center Name</th>
+                                <th>District</th>
+                                <th>Counters</th>
+                                <th>Daily Cap (MT)</th>
+                                <th>Current Token</th>
+                                <th>Status</th>
+                                <th>Map Location</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-centers-body">
+                            <tr><td colspan="9" style="text-align: center; padding: 20px;">Loading centers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. STATEWIDE PROCUREMENT SCHEDULES & CAPACITY MANAGEMENT (CREATE NEW SCHEDULE) -->
+            <div class="card" style="border-top: 4px solid var(--accent-gold);">
+                <div class="card-header">
+                    <div>
+                        <h2>📅 Statewide Procurement Schedules & Capacity Management</h2>
+                        <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 2px;">
+                            Statewide Administration: Configure daily intake quotas, time slots, and manage procurement schedules across all mandis.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <select id="admin-sched-center-filter" class="form-control" style="width: auto; min-height: 38px;" onchange="loadAdminSchedules()">
+                            <option value="">All Procurement Centers</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="openAdminCreateScheduleModal()">
+                            <span>➕ Create New Schedule</span>
+                        </button>
+                        <button class="btn btn-outline" style="padding: 6px 14px; min-height: 38px;" onclick="loadAdminSchedules()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="admin-schedules-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Procurement Center</th>
+                                <th>Commodity</th>
+                                <th>Operating Hours</th>
+                                <th>Capacity (Booked / Total)</th>
+                                <th>Slots</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-schedules-body">
+                            <tr><td colspan="8" style="text-align: center; padding: 20px;">Loading statewide schedules...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-        </div>
-        <!-- END TAB 1: ANALYTICS & INFRASTRUCTURE -->
+        <!-- END TAB: ADD NEW CENTER & SCHEDULES -->
 
         <!-- TAB 2: CENTRAL OFFICE USERS MANAGEMENT -->
         <div id="tab-pane-officials" class="portal-tab-content">
@@ -304,13 +349,7 @@
                         </p>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                        <input type="text" id="admin-farmer-search" class="form-control" style="min-height: 38px; width: 220px;" placeholder="Search farmer, code, phone..." onkeyup="filterAdminFarmersTable()">
-                        <select id="admin-farmer-approval-filter" class="form-control" style="width: auto; min-height: 38px;" onchange="loadAdminFarmers()">
-                            <option value="ALL">All Statuses</option>
-                            <option value="PENDING" selected>⏳ Pending Approval</option>
-                            <option value="APPROVED">✅ Approved</option>
-                            <option value="REJECTED">❌ Rejected</option>
-                        </select>
+                        <input type="text" id="admin-farmer-search" class="form-control" style="min-height: 38px; width: 280px;" placeholder="Search farmer, code, phone..." onkeyup="filterAdminFarmersTable()">
                         <button class="btn btn-outline" onclick="loadAdminFarmers()">🔄 Refresh</button>
                     </div>
                 </div>
@@ -324,8 +363,25 @@
                                 <th>Contact & Aadhaar</th>
                                 <th>Location</th>
                                 <th>Land (Acres)</th>
-                                <th>Registered Center</th>
-                                <th>Approval Status</th>
+                                <th style="min-width: 205px;">
+                                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                                        <span style="font-weight: 700;">Registered Center</span>
+                                        <select id="admin-farmer-center-filter" class="form-control" style="font-size: 0.8rem; padding: 4px 8px; height: 30px; line-height: 1.2; font-weight: normal; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #1e293b;" onchange="loadAdminFarmers()" title="Filter table by Registered Procurement Center">
+                                            <option value="">🏢 All Registered Centers</option>
+                                        </select>
+                                    </div>
+                                </th>
+                                <th style="min-width: 175px;">
+                                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                                        <span style="font-weight: 700;">Approval Status</span>
+                                        <select id="admin-farmer-approval-filter" class="form-control" style="font-size: 0.8rem; padding: 4px 8px; height: 30px; line-height: 1.2; font-weight: normal; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #1e293b;" onchange="loadAdminFarmers()" title="Filter table by Approval Status">
+                                            <option value="ALL">All Statuses</option>
+                                            <option value="PENDING" selected>⏳ Pending Approval</option>
+                                            <option value="APPROVED">✅ Approved</option>
+                                            <option value="REJECTED">❌ Rejected</option>
+                                        </select>
+                                    </div>
+                                </th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -438,7 +494,7 @@
             <form id="admin-edit-schedule-form" onsubmit="handleAdminUpdateSchedule(event)">
                 <input type="hidden" id="admin-edit-schedule-id">
                 <div style="background: var(--bg-card); padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 12px; font-size: 0.9rem; border: 1px solid var(--border-color);">
-                    <div><strong>Center:</strong> <span id="admin-edit-center-name">-</span></div>
+                    <div><strong>Center:</strong> <span id="admin-edit-sched-center-name">-</span></div>
                     <div><strong>Commodity:</strong> <span id="admin-edit-commodity-name">-</span></div>
                 </div>
                 <div class="form-group" style="margin-bottom: 12px;">
@@ -620,12 +676,232 @@
         </div>
     </div>
 
+    <!-- MODAL: ADMIN CREATE PROCUREMENT CENTER -->
+    <div id="admin-create-center-modal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.25rem; color: var(--primary-dark);">➕ Add New Procurement Center</h3>
+                    <p style="margin: 3px 0 0 0; color: var(--text-muted); font-size: 0.85rem;">Provision a new APMC Mandi / Village Hub with GPS coordinates</p>
+                </div>
+                <button class="btn-close" onclick="closeAdminCreateCenterModal()">&times;</button>
+            </div>
+            <form id="admin-create-center-form" onsubmit="handleAdminCreateCenter(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Center Code *</label>
+                        <input type="text" id="admin-new-center-code" class="form-control" placeholder="e.g. HYD-005" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Center Name *</label>
+                        <input type="text" id="admin-new-center-name" class="form-control" placeholder="e.g. Central Mandi - Hyderabad" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">District *</label>
+                        <input type="text" id="admin-new-center-district" class="form-control" placeholder="e.g. Hyderabad" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">State *</label>
+                        <input type="text" id="admin-new-center-state" class="form-control" value="Telangana" required>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Full Address *</label>
+                    <textarea id="admin-new-center-address" class="form-control" rows="2" placeholder="e.g. Agricultural Market Yard, Gaddiannaram, Hyderabad - 500036" required></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Contact Phone *</label>
+                        <input type="text" id="admin-new-center-phone" class="form-control" placeholder="e.g. +91 40 24040101" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Center Status *</label>
+                        <select id="admin-new-center-status" class="form-control">
+                            <option value="OPEN">OPEN (Operational)</option>
+                            <option value="IN PROGRESS">IN PROGRESS</option>
+                            <option value="PAUSED">PAUSED</option>
+                            <option value="DELAYED">DELAYED</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="CLOSED">CLOSED</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Opening Time *</label>
+                        <input type="time" id="admin-new-center-start" class="form-control" value="08:30" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Closing Time *</label>
+                        <input type="time" id="admin-new-center-end" class="form-control" value="17:30" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Daily Cap (MT) *</label>
+                        <input type="number" step="0.1" id="admin-new-center-capacity" class="form-control" value="100.0" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Active Counters *</label>
+                        <input type="number" id="admin-new-center-counters" class="form-control" value="2" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Avg Process Secs *</label>
+                        <input type="number" id="admin-new-center-proctime" class="form-control" value="480" min="60" required>
+                    </div>
+                </div>
+                <div style="background: #f8fafc; border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px;">
+                    <div style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: var(--primary);">📍 GPS Map Coordinates (Optional)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div class="form-group">
+                            <label style="font-size: 0.82rem; display: block; margin-bottom: 2px;">Latitude</label>
+                            <input type="number" step="0.000001" id="admin-new-center-lat" class="form-control" placeholder="e.g. 17.385044">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.82rem; display: block; margin-bottom: 2px;">Longitude</label>
+                            <input type="number" step="0.000001" id="admin-new-center-lng" class="form-control" placeholder="e.g. 78.486671">
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn btn-outline" onclick="closeAdminCreateCenterModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">➕ Create Center</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADMIN EDIT PROCUREMENT CENTER -->
+    <div id="admin-edit-center-modal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.25rem; color: var(--primary-dark);">✏️ Update Procurement Center</h3>
+                    <p style="margin: 3px 0 0 0; color: var(--text-muted); font-size: 0.85rem;">Modify operational quotas, schedule timings, status, or GPS location</p>
+                </div>
+                <button class="btn-close" onclick="closeAdminEditCenterModal()">&times;</button>
+            </div>
+            <form id="admin-edit-center-form" onsubmit="handleAdminUpdateCenter(event)">
+                <input type="hidden" id="admin-edit-center-id">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Center Code *</label>
+                        <input type="text" id="admin-edit-center-code" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Center Name *</label>
+                        <input type="text" id="admin-edit-center-name" class="form-control" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">District *</label>
+                        <input type="text" id="admin-edit-center-district" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">State *</label>
+                        <input type="text" id="admin-edit-center-state" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Full Address *</label>
+                    <textarea id="admin-edit-center-address" class="form-control" rows="2" required></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Contact Phone *</label>
+                        <input type="text" id="admin-edit-center-phone" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Center Status *</label>
+                        <select id="admin-edit-center-status" class="form-control">
+                            <option value="OPEN">OPEN (Operational)</option>
+                            <option value="IN PROGRESS">IN PROGRESS</option>
+                            <option value="PAUSED">PAUSED</option>
+                            <option value="DELAYED">DELAYED</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="CLOSED">CLOSED</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Opening Time *</label>
+                        <input type="time" id="admin-edit-center-start" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Closing Time *</label>
+                        <input type="time" id="admin-edit-center-end" class="form-control" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Daily Cap (MT) *</label>
+                        <input type="number" step="0.1" id="admin-edit-center-capacity" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Active Counters *</label>
+                        <input type="number" id="admin-edit-center-counters" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.88rem;">Avg Process Secs *</label>
+                        <input type="number" id="admin-edit-center-proctime" class="form-control" min="60" required>
+                    </div>
+                </div>
+                <div style="background: #f8fafc; border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 16px;">
+                    <div style="font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: var(--primary);">📍 GPS Map Coordinates</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div class="form-group">
+                            <label style="font-size: 0.82rem; display: block; margin-bottom: 2px;">Latitude</label>
+                            <input type="number" step="0.000001" id="admin-edit-center-lat" class="form-control" placeholder="e.g. 17.385044">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.82rem; display: block; margin-bottom: 2px;">Longitude</label>
+                            <input type="number" step="0.000001" id="admin-edit-center-lng" class="form-control" placeholder="e.g. 78.486671">
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn btn-outline" onclick="closeAdminEditCenterModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADMIN CENTER MAP VIEW -->
+    <div id="admin-center-map-modal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="admin-map-title" style="margin: 0; font-size: 1.2rem; color: var(--primary-dark);">Center Map Location</h3>
+                    <p id="admin-map-address" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.85rem;"></p>
+                </div>
+                <button class="btn-close" onclick="closeAdminCenterMapModal()">&times;</button>
+            </div>
+            <div style="width: 100%; height: 330px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); margin-bottom: 16px; background: #f8fafc;">
+                <iframe id="admin-map-iframe" width="100%" height="100%" frameborder="0" scrolling="no" marginheight="0" marginwidth="0" src="" style="border:0;"></iframe>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <span id="admin-map-coords" style="font-size: 0.82rem; font-family: monospace; color: var(--text-muted);"></span>
+                <div style="display: flex; gap: 8px;">
+                    <a id="admin-map-gmaps-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="font-size: 0.85rem; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                        🗺️ Google Maps
+                    </a>
+                    <button type="button" onclick="closeAdminCenterMapModal()" class="btn btn-primary" style="font-size: 0.85rem; padding: 6px 14px;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <p>Smart India Hackathon 2026 • Problem Statement PS ID: 26032 • Digital Procurement Platform</p>
     </footer>
 
-    <script src="/static/js/i18n.js?v=2.2.1"></script>
-    <script src="/static/js/app.js?v=2.2.1"></script>
-    <script src="/static/js/admin.js?v=2.2.1"></script>
+    <script src="/static/js/i18n.js?v=2.2.6"></script>
+    <script src="/static/js/app.js?v=2.2.6"></script>
+    <script src="/static/js/admin.js?v=2.2.6"></script>
 </body>
 </html>

@@ -10,31 +10,43 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def reset_demo_state():
     db = SessionLocal()
-    # Remove any dynamically created test tokens with id > 25
+    # Remove any dynamically created test tokens with id > 30
     from backend.app.models import Booking, ProcurementTransaction
-    extra_tokens = db.query(Token).filter(Token.id > 25).all()
+    extra_tokens = db.query(Token).filter(Token.id > 30).all()
     for et in extra_tokens:
         # Also delete transactions if any
         db.query(ProcurementTransaction).filter(ProcurementTransaction.token_id == et.id).delete()
         db.delete(et)
     db.commit()
 
-    extra_bookings = db.query(Booking).filter(Booking.id > 25).all()
+    extra_bookings = db.query(Booking).filter(Booking.id > 30).all()
     for eb in extra_bookings:
         db.delete(eb)
     db.commit()
 
-    # Reset seeded waiting tokens 19 to 25
-    waiting_tokens = db.query(Token).filter(Token.id.between(19, 25)).all()
+    # Reset seeded waiting tokens 19 to 30
+    waiting_tokens = db.query(Token).filter(Token.id.between(19, 30)).all()
     for wt in waiting_tokens:
         wt.status = "WAITING"
         wt.called_at = None
         wt.completed_at = None
 
-    c = db.query(ProcurementCenter).filter(ProcurementCenter.id == 1).first()
-    if c:
-        c.current_token_seq = 18
-        c.status = "OPEN"
+    c1 = db.query(ProcurementCenter).filter(ProcurementCenter.id == 1).first()
+    if c1:
+        c1.current_token_seq = 18
+        c1.status = "OPEN"
+    c2 = db.query(ProcurementCenter).filter(ProcurementCenter.id == 2).first()
+    if c2:
+        c2.current_token_seq = 0
+        c2.status = "OPEN"
+    c3 = db.query(ProcurementCenter).filter(ProcurementCenter.id == 3).first()
+    if c3:
+        c3.current_token_seq = 0
+        c3.status = "OPEN"
+    c4 = db.query(ProcurementCenter).filter(ProcurementCenter.id == 4).first()
+    if c4:
+        c4.current_token_seq = 0
+        c4.status = "OPEN"
     db.commit()
     db.close()
     yield

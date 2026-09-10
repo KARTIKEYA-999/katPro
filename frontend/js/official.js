@@ -4,6 +4,9 @@
  */
 
 let officialCenterId = null;
+let officialCenterName = "";
+let officialCenterCode = "";
+let officialDistrict = "";
 let currentQueueItems = [];
 let officialFarmers = [];
 let wsClient = null;
@@ -23,11 +26,20 @@ async function loadDashboard() {
     try {
         const stats = await App.fetch("/api/official/dashboard");
         officialCenterId = stats.center_id;
+        officialCenterName = stats.center_name;
+        officialCenterCode = stats.center_code;
+        officialDistrict = stats.district;
 
         document.getElementById("official-center-name").textContent = stats.center_name;
         document.getElementById("official-inspector-sub").textContent = 
             `Center Code: ${stats.center_code} • District: ${stats.district} • Hours: ${stats.working_hours}`;
         document.getElementById("official-top-title").textContent = `${stats.center_name} (Control Room)`;
+
+        const regCenter = document.getElementById("registry-center-name");
+        if (regCenter) regCenter.textContent = `${stats.center_name} (${stats.center_code})`;
+
+        const badgeCenter = document.getElementById("create-farmer-center-badge");
+        if (badgeCenter) badgeCenter.textContent = `${stats.center_name} (${stats.center_code})`;
 
         document.getElementById("stat-current-token").textContent = stats.current_token;
         document.getElementById("stat-waiting-farmers").textContent = stats.waiting_farmers;
@@ -79,6 +91,7 @@ function renderQueueTable(items) {
         let badgeClass = "badge-live";
         if (item.status === "PROCESSING") badgeClass = "badge-danger pulse";
         else if (item.status === "COMPLETED") badgeClass = "badge-live";
+        else if (item.status === "PAYMENT_FAILED") badgeClass = "badge-danger";
         else if (item.status === "SKIPPED") badgeClass = "badge-warning";
         else badgeClass = "badge-warning";
 
@@ -102,6 +115,11 @@ function renderQueueTable(items) {
                         ${item.status === 'PROCESSING' ? `
                             <button class="btn btn-success" style="padding: 6px 10px; font-size: 0.95rem; min-height: 32px; border-radius: 6px;" onclick="openWeighModal(${item.token_id})" title="Weigh & Complete Transaction" aria-label="Weigh Farmer">
                                 ⚖️
+                            </button>
+                        ` : ''}
+                        ${item.status === 'PAYMENT_FAILED' ? `
+                            <button class="btn btn-warning" style="padding: 6px 10px; font-size: 0.85rem; min-height: 32px; border-radius: 6px; font-weight: 700;" onclick="retryTokenPayment(${item.token_id})" title="Retry Payment">
+                                💳 Retry
                             </button>
                         ` : ''}
                     </div>
@@ -155,10 +173,15 @@ async function togglePauseQueue() {
     await handleCenterStatusChange();
 }
 
-// 6. Weighing and Transaction Completion
+// 6. Weighing, Payment Details, and Razorpay Transaction Completion
+let pendingWeighData = null;
+let selectedRzpMethodCode = "DIRECT_DBT";
+
 function openWeighModal(preSelectedTokenId = null) {
     const select = document.getElementById("weigh-token-select");
-    const processingTokens = currentQueueItems.filter(i => i.status === "PROCESSING" || i.status === "WAITING");
+    const processingTokens = currentQueueItems.filter(i => 
+        i.status === "PROCESSING" || i.status === "WAITING" || i.status === "PAYMENT_FAILED"
+    );
 
     if (processingTokens.length === 0) {
         App.showToast("No active or processing tokens to weigh. Call next farmer first.", "alert");
@@ -167,7 +190,7 @@ function openWeighModal(preSelectedTokenId = null) {
 
     select.innerHTML = processingTokens.map(i => `
         <option value="${i.token_id}" ${preSelectedTokenId === i.token_id ? 'selected' : ''}>
-            ${i.token_number} - ${i.farmer_name} (${i.commodity}, Est: ${i.estimated_quantity_qtl} Qtl)
+            ${i.token_number} - ${i.farmer_name} (${i.commodity}, Est: ${i.estimated_quantity_qtl} Qtl) [${i.status}]
         </option>
     `).join('');
 
@@ -185,8 +208,9 @@ function recalcNetWeight() {
     const net = Math.max(0, gross - tare);
     document.getElementById("weigh-net").value = net.toFixed(2);
 
-    // Approximate MSP calculation: ~₹2,203/Qtl
-    const msp = 2203.00;
+    const tokenId = document.getElementById("weigh-token-select").value;
+    const selectedItem = currentQueueItems.find(i => String(i.token_id) === String(tokenId));
+    const msp = (selectedItem && selectedItem.msp_rate) ? selectedItem.msp_rate : 2203.00;
     const est = net * msp;
     document.getElementById("weigh-payout-est").textContent = `₹${est.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 }
@@ -194,30 +218,238 @@ function recalcNetWeight() {
 async function handleCompleteTransaction(e) {
     e.preventDefault();
     const tokenId = document.getElementById("weigh-token-select").value;
-    const gross = parseFloat(document.getElementById("weigh-gross").value);
-    const tare = parseFloat(document.getElementById("weigh-tare").value);
-    const moisture = parseFloat(document.getElementById("weigh-moisture").value);
+    const gross = parseFloat(document.getElementById("weigh-gross").value) || 0;
+    const tare = parseFloat(document.getElementById("weigh-tare").value) || 0;
+    const net = Math.max(0, gross - tare);
+    const moisture = parseFloat(document.getElementById("weigh-moisture").value) || 0;
     const grade = document.getElementById("weigh-grade").value;
 
+    if (net <= 0) {
+        App.showToast("Net weight must be greater than 0 Quintals", "alert");
+        return;
+    }
+
+    const selectedItem = currentQueueItems.find(i => String(i.token_id) === String(tokenId));
+    const msp = (selectedItem && selectedItem.msp_rate) ? selectedItem.msp_rate : 2203.00;
+    const finalAmount = Math.round(net * msp * 100) / 100;
+
+    pendingWeighData = {
+        tokenId: parseInt(tokenId),
+        tokenNumber: selectedItem ? selectedItem.token_number : `Token #${tokenId}`,
+        farmerName: selectedItem ? selectedItem.farmer_name : "Farmer",
+        farmerCode: selectedItem ? (selectedItem.farmer_code || "FAR-TS-001") : "FAR-TS-001",
+        farmerPhone: selectedItem ? (selectedItem.farmer_phone || "+91 94401 22001") : "+91 94401 22001",
+        commodity: selectedItem ? selectedItem.commodity : "Paddy / Rice",
+        gross,
+        tare,
+        net,
+        moisture,
+        grade,
+        msp,
+        finalAmount,
+        bankName: selectedItem ? (selectedItem.bank_name || "State Bank of India") : "State Bank of India",
+        bankAccount: selectedItem ? (selectedItem.bank_account_number || "382910484821") : "382910484821",
+        bankIfsc: selectedItem ? (selectedItem.bank_ifsc_code || "SBIN0020112") : "SBIN0020112"
+    };
+
+    closeWeighModal();
+    await openPaymentDetailsModal(pendingWeighData);
+}
+
+// 6b. Open Payment Details Modal
+async function openPaymentDetailsModal(data) {
+    if (!data) return;
+
+    // Attempt to fetch fresh database payment details
     try {
+        const details = await App.fetch(`/api/official/token-payment-details/${data.tokenId}`);
+        if (details) {
+            data.farmerName = details.farmer_name || data.farmerName;
+            data.farmerCode = details.farmer_code || data.farmerCode;
+            data.farmerPhone = details.farmer_phone || data.farmerPhone;
+            data.bankName = details.bank_name || data.bankName;
+            data.bankAccount = details.bank_account_number || data.bankAccount;
+            data.bankIfsc = details.bank_ifsc_code || data.bankIfsc;
+            data.upiId = details.upi_id || `${data.farmerPhone.replace(/\D/g, '')}@upi`;
+            if (details.msp_rate) data.msp = details.msp_rate;
+            data.finalAmount = Math.round(data.net * data.msp * 100) / 100;
+        }
+    } catch (err) {
+        console.warn("Could not load remote token payment details, falling back to roster:", err);
+    }
+
+    const fmtMoney = (amt) => `₹${Number(amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+    document.getElementById("pay-token-badge").textContent = `Token ${data.tokenNumber}`;
+    document.getElementById("pay-farmer-name").textContent = data.farmerName;
+    document.getElementById("pay-farmer-code").textContent = data.farmerCode;
+    document.getElementById("pay-farmer-phone").textContent = data.farmerPhone;
+
+    document.getElementById("pay-bank-name").value = data.bankName || "State Bank of India";
+    document.getElementById("pay-bank-account").value = data.bankAccount || "382910484821";
+    document.getElementById("pay-bank-ifsc").value = (data.bankIfsc || "SBIN0020112").toUpperCase();
+    document.getElementById("pay-upi-id").value = data.upiId || `${data.farmerPhone.replace(/\D/g, '')}@upi`;
+
+    document.getElementById("pay-commodity-grade").textContent = `${data.commodity} (${data.grade})`;
+    document.getElementById("pay-net-weight-display").textContent = `${data.net.toFixed(2)} Qtl`;
+    document.getElementById("pay-msp-rate-display").textContent = `${fmtMoney(data.msp)} / Qtl`;
+    document.getElementById("pay-final-amount-display").textContent = fmtMoney(data.finalAmount);
+    document.getElementById("btn-pay-amount-label").textContent = `(${fmtMoney(data.finalAmount)})`;
+
+    document.getElementById("payment-details-modal").style.display = "flex";
+}
+
+function closePaymentDetailsModal() {
+    document.getElementById("payment-details-modal").style.display = "none";
+}
+
+function backToWeighbridge() {
+    closePaymentDetailsModal();
+    if (pendingWeighData) {
+        openWeighModal(pendingWeighData.tokenId);
+    }
+}
+
+// 6c. Proceed from Payment Details to Razorpay Gateway
+function handleProceedToRazorpay(e) {
+    e.preventDefault();
+    if (!pendingWeighData) return;
+
+    const bankName = document.getElementById("pay-bank-name").value.trim();
+    const bankAccount = document.getElementById("pay-bank-account").value.trim();
+    const bankIfsc = document.getElementById("pay-bank-ifsc").value.trim().toUpperCase();
+    const upiId = document.getElementById("pay-upi-id").value.trim();
+
+    if (!bankAccount || bankAccount.length < 6) {
+        App.showToast("Please enter a valid bank account number", "alert");
+        return;
+    }
+    if (!bankIfsc || bankIfsc.length < 5) {
+        App.showToast("Please enter a valid IFSC code (e.g. SBIN0020112)", "alert");
+        return;
+    }
+
+    pendingWeighData.bankName = bankName;
+    pendingWeighData.bankAccount = bankAccount;
+    pendingWeighData.bankIfsc = bankIfsc;
+    pendingWeighData.upiId = upiId;
+
+    const fmtMoney = (amt) => `₹${Number(amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+    // Close payment details modal and open the Razorpay dummy gateway modal cleanly
+    closePaymentDetailsModal();
+
+    document.getElementById("rzp-display-amount").textContent = fmtMoney(pendingWeighData.finalAmount);
+    document.getElementById("rzp-display-beneficiary").textContent = `Beneficiary: ${pendingWeighData.farmerName} (${pendingWeighData.tokenNumber})`;
+    
+    // Select default DBT method
+    selectedRzpMethodCode = "DIRECT_DBT";
+    document.querySelectorAll(".rzp-method-option").forEach(o => o.classList.remove("selected"));
+    const optDbt = document.getElementById("rzp-opt-dbt");
+    if (optDbt) optDbt.classList.add("selected");
+    updateRzpDestinationDisplay("DIRECT_DBT");
+
+    document.getElementById("razorpay-simulation-modal").style.display = "flex";
+}
+
+function updateRzpDestinationDisplay(methodCode) {
+    const destEl = document.getElementById("rzp-destination-display");
+    if (!destEl || !pendingWeighData) return;
+
+    if (methodCode === "DIRECT_DBT") {
+        destEl.textContent = `Direct DBT Bank A/c: ${pendingWeighData.bankAccount} (${pendingWeighData.bankIfsc} - ${pendingWeighData.bankName})`;
+    } else if (methodCode === "UPI") {
+        destEl.textContent = `UPI Virtual Payment Address: ${pendingWeighData.upiId || 'farmer@upi'}`;
+    } else if (methodCode === "NETBANKING") {
+        destEl.textContent = `NetBanking Portal: ${pendingWeighData.bankName}`;
+    } else if (methodCode === "CORPORATE_CARD") {
+        const last4 = (pendingWeighData.bankAccount && pendingWeighData.bankAccount.length >= 4) ? pendingWeighData.bankAccount.slice(-4) : "4821";
+        destEl.textContent = `Govt Agri-Procurement DBT Treasury Card: •••• ${last4}`;
+    }
+}
+
+function selectRzpMethod(el, methodCode) {
+    document.querySelectorAll(".rzp-method-option").forEach(o => o.classList.remove("selected"));
+    if (el) el.classList.add("selected");
+    selectedRzpMethodCode = methodCode;
+    updateRzpDestinationDisplay(methodCode);
+}
+
+function closeRazorpaySimModal() {
+    document.getElementById("razorpay-simulation-modal").style.display = "none";
+}
+
+// 6d. Execute Razorpay Simulation Outcome (SUCCESS or FAILED)
+async function executeRazorpaySimulation(outcome, rzpPaymentId = null, failureReason = null) {
+    if (!pendingWeighData) {
+        App.showToast("No active procurement transaction pending payment", "alert");
+        closeRazorpaySimModal();
+        return;
+    }
+
+    const btnSuccess = document.getElementById("btn-rzp-sim-success");
+    const btnFailure = document.getElementById("btn-rzp-sim-failure");
+    if (btnSuccess) btnSuccess.disabled = true;
+    if (btnFailure) btnFailure.disabled = true;
+
+    const isSuccess = outcome === "SUCCESS";
+    const paymentId = rzpPaymentId || (isSuccess ? `pay_rzp_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7).toUpperCase()}` : null);
+    const orderId = `order_dbt_${pendingWeighData.tokenId}_${Date.now()}`;
+    const reason = failureReason || "Razorpay transaction declined: Beneficiary bank network timeout";
+
+    try {
+        const payload = {
+            token_id: pendingWeighData.tokenId,
+            gross_weight_qtl: pendingWeighData.gross,
+            tare_weight_qtl: pendingWeighData.tare,
+            moisture_content_pct: pendingWeighData.moisture,
+            quality_grade: pendingWeighData.grade,
+            payment_status: isSuccess ? "SUCCESS" : "PAYMENT_FAILED",
+            payment_method: selectedRzpMethodCode,
+            razorpay_payment_id: paymentId,
+            razorpay_order_id: orderId,
+            bank_account_number: pendingWeighData.bankAccount,
+            bank_ifsc: pendingWeighData.bankIfsc,
+            upi_id: pendingWeighData.upiId,
+            failure_reason: isSuccess ? null : reason
+        };
+
         const res = await App.fetch("/api/official/complete-token", {
             method: "POST",
-            body: JSON.stringify({
-                token_id: parseInt(tokenId),
-                gross_weight_qtl: gross,
-                tare_weight_qtl: tare,
-                moisture_content_pct: moisture,
-                quality_grade: grade
-            })
+            body: JSON.stringify(payload)
         });
 
-        App.showToast(`Transaction ${res.transaction_ref} recorded! Amount: ₹${res.final_amount.toLocaleString()}`, "success");
-        closeWeighModal();
+        closeRazorpaySimModal();
+        closePaymentDetailsModal();
+
+        if (isSuccess) {
+            App.playChime("success");
+            App.showToast(`🎉 Payment Successful! ₹${res.final_amount.toLocaleString()} disbursed via Razorpay (${paymentId}). Token COMPLETED!`, "success");
+        } else {
+            App.playChime("alert");
+            App.showToast(`⚠️ Payment Failed: ${res.reason || reason}. Status marked as PAYMENT_FAILED.`, "alert");
+        }
+
+        pendingWeighData = null;
         await loadDashboard();
         await loadQueueRoster();
     } catch (err) {
-        App.showToast(err.message, "alert");
+        App.showToast(`API Error: ${err.message}`, "alert");
+    } finally {
+        if (btnSuccess) btnSuccess.disabled = false;
+        if (btnFailure) btnFailure.disabled = false;
     }
+}
+
+// 6e. Retry Payment for Token with PAYMENT_FAILED status
+async function retryTokenPayment(tokenId) {
+    const item = currentQueueItems.find(i => String(i.token_id) === String(tokenId));
+    if (!item) {
+        App.showToast("Token not found in queue", "alert");
+        return;
+    }
+    App.showToast(`Opening weighbridge & payment details for ${item.token_number}...`, "info");
+    openWeighModal(tokenId);
 }
 
 // 7. Skip / No-show Token
@@ -352,8 +584,11 @@ function renderOfficialFarmersTable(farmers) {
                 <td><strong style="color: var(--primary-color);">${escapeHtml(f.farmer_code)}</strong></td>
                 <td><strong>${escapeHtml(f.full_name)}</strong></td>
                 <td>${escapeHtml(f.phone)}</td>
-                <td>${escapeHtml(f.aadhaar_number || '-')}</td>
-                <td>${escapeHtml(f.village)}, ${escapeHtml(f.mandal || '')}</td>
+                <td>
+                    <span class="badge badge-outline" style="font-size: 0.8rem; font-weight: 600;">${escapeHtml(f.center_code || officialCenterCode || 'CPC')}</span>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(f.center_name || officialCenterName || '')}</div>
+                </td>
+                <td>${escapeHtml(f.village)}, ${escapeHtml(f.mandal || f.district || '')}</td>
                 <td><strong>${f.land_area_acres != null ? f.land_area_acres : (f.land_size_acres != null ? f.land_size_acres : '-')}</strong></td>
                 <td>${escapeHtml(f.primary_crop || '-')}</td>
                 <td>
@@ -397,6 +632,10 @@ function openOfficialCreateFarmerModal() {
     const modal = document.getElementById("official-create-farmer-modal");
     if (modal) {
         document.getElementById("official-create-farmer-form").reset();
+        const badgeCenter = document.getElementById("create-farmer-center-badge");
+        if (badgeCenter) badgeCenter.textContent = `${officialCenterName || 'Assigned Center'} (${officialCenterCode || 'RPC'})`;
+        const distInput = document.getElementById("official-farmer-create-district");
+        if (distInput && officialDistrict) distInput.value = officialDistrict;
         modal.style.display = "flex";
     }
 }
@@ -436,7 +675,9 @@ async function handleOfficialCreateFarmer(e) {
                 aadhaar_number: aadhaar,
                 village,
                 mandal,
-                district,
+                district: district || officialDistrict,
+                state: "Telangana",
+                center_id: officialCenterId,
                 pincode: "508213",
                 land_area_acres: parseFloat(land),
                 passbook_number: passbook,
@@ -762,4 +1003,14 @@ window.onQuickCertFarmerSelect = onQuickCertFarmerSelect;
 window.handleQuickCertSubmit = handleQuickCertSubmit;
 window.openBlankRegistrationForm = openBlankRegistrationForm;
 window.printFarmerForm = printFarmerForm;
+
+// Payment Details & Razorpay Integrations
+window.openPaymentDetailsModal = openPaymentDetailsModal;
+window.closePaymentDetailsModal = closePaymentDetailsModal;
+window.backToWeighbridge = backToWeighbridge;
+window.handleProceedToRazorpay = handleProceedToRazorpay;
+window.selectRzpMethod = selectRzpMethod;
+window.closeRazorpaySimModal = closeRazorpaySimModal;
+window.executeRazorpaySimulation = executeRazorpaySimulation;
+window.retryTokenPayment = retryTokenPayment;
 
